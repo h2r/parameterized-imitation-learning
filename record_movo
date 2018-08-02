@@ -167,7 +167,7 @@ right_arm_pose = message_filters.Subscriber('/tf/right_arm_pose', Pose)
 right_arm_vel = message_filters.Subscriber('/tf/right_arm_vels', Twist)
 rgb_state_sub = message_filters.Subscriber('/kinect2/sd/image_color_rect/compressed', CompressedImage)
 depth_state_sub = message_filters.Subscriber('/kinect2/sd/image_depth_rect/compressed', CompressedImage)
-gripper_state_sub = message_filters.Subscriber('/gripper_is_open', Int64)
+gripper_state_sub = message_filters.Subscriber('/movo/right_gripper/gripper_is_open', Int64)
 
 # Initialize
 rospy.init_node('imitate_recorder', log_level=rospy.DEBUG)

@@ -25,7 +25,7 @@ listener = rospy.Subscriber("/movo/right_gripper/joint_states", JointState, call
 # Give time for initialization
 rospy.Rate(1).sleep()
 
-robot_in_map = rospy.Publisher('gripper_is_open', Int64, queue_size=1)
+robot_in_map = rospy.Publisher('/movo/right_gripper/gripper_is_open', Int64, queue_size=1)
 
 rate = rospy.Rate(10)
 while not rospy.is_shutdown():
