@@ -16,7 +16,7 @@ import os
 import sys
 
 # Global Variables
-#The first argument should be the task that we are doing
+#The first argument should be the name task that we are doing
 task = sys.argv[1]
 if not os.path.exists('datas/' + task + '/'):
   os.mkdir('datas/' + task + '/')
@@ -86,6 +86,15 @@ class ApproxTimeSync(message_filters.ApproximateTimeSynchronizer):
         self.lock.release()
 
 def callback(pose, vels, rgb, depth, gripper):
+  """
+  This is the callback method for the synchronized subscriber
+  Params:
+    pose - Position(x,y,z), Quaternion(x,y,z,w)
+    vels - Linear(x,y,z), Angular(x,y,z)
+    rgb - Compressed Image 3 channels
+    depth - Compressed Image 1 channel
+    gripper - 0/1 for is gripping
+  """
   curr_time = str(time.time())
   # We are toggling this global variable
   global is_recording
@@ -107,6 +116,7 @@ def callback(pose, vels, rgb, depth, gripper):
   lin = twist.linear
   # angular velocity
   ang = twist.angular
+  # Unique Code, Position, Quaternion, Linear Vel, Angular Vel, Gripping, Time of Recording
   arr = [counter, posit.x, posit.y, posit.z]
   arr += [orient.w, orient.x, orient.y, orient.z]
   arr += [lin.x, lin.y, lin.z]
@@ -119,14 +129,18 @@ def callback(pose, vels, rgb, depth, gripper):
   counter += 1
 
 def record(value):
+  """
+  Callback function for the toggle subscriber.
+  Params:
+    value - the toggle signal 0/1 from the teleoperation
+  """
   global save_folder
   global task
   global is_recording
   global text_file
   global writer
   global counter
-  print("This is value")
-  print(value.data)
+  # This is the toggle signal from the teleoperation
   if value.data == "0":
     counter = 0
     if is_recording == False:
@@ -148,19 +162,15 @@ def record(value):
     is_recording = True
     print('START')
 
-#TODO CONSIDER COMPRESSED IMAGES 
-#joint_state_sub = message_filters.Subscriber('/robot/joint_states', JointState)
+# The Topics we are Subscribing to
 right_arm_pose = message_filters.Subscriber('/tf/right_arm_pose', Pose)
 right_arm_vel = message_filters.Subscriber('/tf/right_arm_vels', Twist)
 rgb_state_sub = message_filters.Subscriber('/kinect2/sd/image_color_rect/compressed', CompressedImage)
 depth_state_sub = message_filters.Subscriber('/kinect2/sd/image_depth_rect/compressed', CompressedImage)
 gripper_state_sub = message_filters.Subscriber('/gripper_is_open', Int64)
-#gripper_cache = message_filters.Cache(gripper_state_sub)
-#mode_sub = message_filters.Subscriber('mode', Int32)
-#penalty_sub = message_filters.Subscriber('penalty', Float32)
 
+# Initialize
 rospy.init_node('imitate_recorder', log_level=rospy.DEBUG)
-#ts = message_filters.ApproximateTimeSynchronizer
 ts = ApproxTimeSync([right_arm_pose, right_arm_vel, rgb_state_sub,  depth_state_sub, gripper_state_sub], 1, 0.1)
 ts.registerCallback(callback)
 
