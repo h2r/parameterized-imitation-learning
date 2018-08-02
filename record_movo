@@ -165,8 +165,8 @@ def record(value):
 # The Topics we are Subscribing to
 right_arm_pose = message_filters.Subscriber('/tf/right_arm_pose', Pose)
 right_arm_vel = message_filters.Subscriber('/tf/right_arm_vels', Twist)
-rgb_state_sub = message_filters.Subscriber('/kinect2/sd/image_color_rect/compressed', CompressedImage)
-depth_state_sub = message_filters.Subscriber('/kinect2/sd/image_depth_rect/compressed', CompressedImage)
+rgb_state_sub = message_filters.Subscriber('/kinect2/qhd/image_color/compressed', CompressedImage)
+depth_state_sub = message_filters.Subscriber('/kinect2/qhd/image_depth/compressed', CompressedImage)
 gripper_state_sub = message_filters.Subscriber('/movo/right_gripper/gripper_is_open', Int64)
 
 # Initialize
