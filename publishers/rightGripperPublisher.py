@@ -5,8 +5,10 @@ import tf
 from tf.transformations import euler_from_quaternion
 import numpy as np
 import message_filters
-from std_msgs.msg import Int64
+from std_msgs.msg import Int64, Header
 from sensor_msgs.msg import JointState
+from imitate_msgs.msg import GripperStamped
+
 
 is_open = None
 
@@ -25,17 +27,14 @@ listener = rospy.Subscriber("/movo/right_gripper/joint_states", JointState, call
 # Give time for initialization
 rospy.Rate(1).sleep()
 
-robot_in_map = rospy.Publisher('/movo/right_gripper/gripper_is_open', Int64, queue_size=1)
+robot_in_map = rospy.Publisher('/movo/right_gripper/gripper_is_open', GripperStamped, queue_size=1)
 
-rate = rospy.Rate(10)
+rate = rospy.Rate(30)
 while not rospy.is_shutdown():
-	
-	# try:
-	#     (trans, rot) = listener.lookupTransform('/base_link', '/right_gripper_base_link', rospy.Time(0))
-	#     msg = Pose(Point(*trans), Quaternion(*rot))
-
-	# except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-	#     continue
-	# # Publish the message
-	robot_in_map.publish(is_open)
+	h = Header()
+	h.stamp = rospy.Time.now()
+	msg = GripperStamped()
+	msg.header = h
+	msg.data = Int64(is_open)
+	robot_in_map.publish(msg)
 	rate.sleep()

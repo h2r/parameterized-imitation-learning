@@ -4,19 +4,20 @@ import roslib
 import rospy
 import tf
 from tf.transformations import euler_from_quaternion
-from geometry_msgs.msg import Twist, Vector3
+from geometry_msgs.msg import Twist, TwistStamped, Vector3
+from std_msgs.msg import Header
 
 rospy.init_node('movo_right_tf_listener')
 
 listener = tf.TransformListener()
 
-robot_in_map = rospy.Publisher('tf/right_arm_vels', Twist, queue_size=1)
+robot_in_map = rospy.Publisher('tf/right_arm_vels', TwistStamped, queue_size=1)
 
 prev_time = rospy.get_time()
 curr_time = rospy.get_time()
 prev_rot, prev_trans = None, None
 
-rate = rospy.Rate(10)
+rate = rospy.Rate(30)
 while not rospy.is_shutdown():
     try:
         curr_time = rospy.get_time()
@@ -28,7 +29,11 @@ while not rospy.is_shutdown():
         delta = float(curr_time)-float(prev_time)
         lin_vel = (np.array(curr_trans) - np.array(prev_trans))/delta
         ang_vel = (np.array(euler_from_quaternion(curr_rot)) - np.array(euler_from_quaternion(prev_rot)))/delta
-        msg = Twist(Vector3(*lin_vel), Vector3(*ang_vel))
+        h = Header()
+        h.stamp = rospy.Time.now()
+        msg = TwistStamped()
+        msg.header = h
+        msg.twist = Twist(Vector3(*lin_vel), Vector3(*ang_vel))
 
         # Update
         prev_time = curr_time
