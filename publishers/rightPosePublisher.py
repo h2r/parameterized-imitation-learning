@@ -12,7 +12,7 @@ listener = tf.TransformListener()
 
 robot_in_map = rospy.Publisher('tf/right_arm_pose', PoseStamped, queue_size=1)
 
-rate = rospy.Rate(30)
+rate = rospy.Rate(100)
 while not rospy.is_shutdown():
     try:
         (trans, rot) = listener.lookupTransform('/base_link', '/right_gripper_base_link', rospy.Time(0))

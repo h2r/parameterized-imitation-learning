@@ -29,7 +29,7 @@ rospy.Rate(1).sleep()
 
 robot_in_map = rospy.Publisher('/movo/right_gripper/gripper_is_open', GripperStamped, queue_size=1)
 
-rate = rospy.Rate(30)
+rate = rospy.Rate(100)
 while not rospy.is_shutdown():
 	h = Header()
 	h.stamp = rospy.Time.now()

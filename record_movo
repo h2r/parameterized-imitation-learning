@@ -22,10 +22,10 @@ from cv_bridge import CvBridge
 task = sys.argv[1]
 if not os.path.exists('datas/' + task + '/'):
   os.mkdir('datas/' + task + '/')
-save_folder=None
+save_folder='hi'
 writer = None
 text_file = None
-is_recording = False
+is_recording = True
 counter = 0
 
 def callback(pose, vels, rgb, depth, gripper):
@@ -39,6 +39,7 @@ def callback(pose, vels, rgb, depth, gripper):
     gripper - 0/1 for is gripping
   """
   curr_time = str(time.time())
+  print("Callback!!!!!!")
   bridge = CvBridge()
   # We are toggling this global variable
   global is_recording
@@ -50,6 +51,7 @@ def callback(pose, vels, rgb, depth, gripper):
 	depth_image = bridge.imgmsg_to_cv2(depth, desired_encoding="passthrough")
 	cv2.imwrite(save_folder + str(counter) + '_rgb.png', rgb_image)
 	cv2.imwrite(save_folder + str(counter) + '_depth.png', depth_image)
+	print("PICTURES OBTAINED")
 	# end effector position
 	pose_data = pose.pose
 	posit = pose_data.position
@@ -68,10 +70,10 @@ def callback(pose, vels, rgb, depth, gripper):
 	arr += [lin.x, lin.y, lin.z]
 	arr += [ang.x, ang.y, ang.z]
 	arr += [gripper_data.data, float(curr_time)]
-	if writer != None:
-	  writer.writerow(arr)
-	else:
-	  print('WARNING: UNABLE TO WRITE DATA TO WRITER!') 
+	# if writer != None:
+	#   writer.writerow(arr)
+	# else:
+	#   print('WARNING: UNABLE TO WRITE DATA TO WRITER!') 
 	counter += 1
 
 def record(value):
@@ -123,8 +125,8 @@ ts = message_filters.ApproximateTimeSynchronizer([right_arm_pose, right_arm_vel,
 ts.registerCallback(callback)
 
 # Toggle
-toggle_button = message_filters.Subscriber('/unity_learning_record', String)
-toggle_button.registerCallback(record)
+#toggle_button = message_filters.Subscriber('/unity_learning_record', String)
+#toggle_button.registerCallback(record)
 
 print('Spinning')
 rospy.spin()

@@ -17,7 +17,7 @@ prev_time = rospy.get_time()
 curr_time = rospy.get_time()
 prev_rot, prev_trans = None, None
 
-rate = rospy.Rate(30)
+rate = rospy.Rate(100)
 while not rospy.is_shutdown():
     try:
         curr_time = rospy.get_time()
