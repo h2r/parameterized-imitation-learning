@@ -55,7 +55,7 @@ class ImitateRecorder():
     self.init_listeners()
     rospy.Rate(5).sleep()
     # Define the rate at which we will collect data
-    rate = rospy.Rate(5)
+    rate = rospy.Rate(15)
     while not rospy.is_shutdown():
       if None not in self.data:
         print("Data Collected!!")
