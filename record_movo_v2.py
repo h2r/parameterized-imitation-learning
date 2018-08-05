@@ -20,7 +20,7 @@ class ImitateRecorder():
     # Create the appropriate directory in the datas for the task we are training
     if not os.path.exists('datas/' + task + '/'):
       os.mkdir('datas/' + task + '/')
-    self.save_folder='hi' # The specific folder
+    self.save_folder = None # The specific folder
     self.writer = None # The writer to create our txt files
     self.text_file = None # The file that we are writing to currently
     self.is_recording = False # Toggling recording
@@ -29,59 +29,49 @@ class ImitateRecorder():
     # Initialize current values
     self.Data = namedlist('Data', ['pose', 'twist', 'grip', 'rgb', 'depth'])
     self.data = self.Data(pose=None, twist=None, grip=None, rgb=None, depth=None)
-    self.init_toggle()
-    rospy.spin()
 
   def toggle_collection(self, toggle):
-    if toggle == "0":
-      if self.is_recording:
-        self.counter = 0
-        self.is_recording = False
-        self.unsubscribe()
-        time.sleep(1)
-        if self.text_file != None:
-          self.text_file.close()
-          self.text_file = None
-        print("-----Stop Recording-----")
+    if toggle is "0":
+      self.counter = 0
+      self.is_recording = False
+      self.unsubscribe()
+      time.sleep(1)
+      if self.text_file != None:
+        self.text_file.close()
+        self.text_file = None
+      print("-----Stop Recording-----")
     else:
-      if not self.is_recording:
-        save_folder = 'datas/' + task + '/' + str(time.time()) + '/'
-        os.mkdir(save_folder)
-        self.save_folder = save_folder
-        self.text_file = open(save_folder + 'vectors.txt', 'w')
-        self.writer = csv.writer(self.text_file)
-        self.is_recording = True
-        self.collect_data()
+      save_folder = 'datas/' + task + '/' + str(time.time()) + '/'
+      os.mkdir(save_folder)
+      self.save_folder = save_folder
+      self.text_file = open(save_folder + 'vectors.txt', 'w')
+      self.writer = csv.writer(self.text_file)
+      self.is_recording = True
+      print("=====Start Recording=====")
+      self.collect_data()
 
   def collect_data(self):
     # Initialize Listeners
     self.init_listeners()
     rospy.Rate(5).sleep()
-    print("=====Start Recording=====")
     # Define the rate at which we will collect data
     rate = rospy.Rate(5)
     while not rospy.is_shutdown():
-      if self.is_recording:
-        if None not in self.data:
-          print("Data Collected!!")
-          rgb_image = self.bridge.imgmsg_to_cv2(self.data.rgb, desired_encoding="passthrough")
-          depth_image = self.bridge.imgmsg_to_cv2(self.data.depth, desired_encoding="passthrough")
-          cv2.imwrite(self.save_folder + str(self.counter) + '_rgb.png', rgb_image)
-          cv2.imwrite(self.save_folder + str(self.counter) + '_depth.png', depth_image)
-          posit = self.data.pose.position
-          orient = self.data.pose.orientation
-          lin = self.data.twist.linear
-          ang = self.data.twist.angular
-          arr = [self.counter, posit.x, posit.y, posit.z, orient.w, orient.x, orient.y, orient.z, lin.x, lin.y, lin.z, ang.x, ang.y, ang.z, self.data.grip, time.time()]
-          self.writer.writerow(arr)
-          self.data = self.Data(pose=None, twist=None, grip=None, rgb=None, depth=None)
-          self.counter += 1
-      else:
-        break
+      if None not in self.data:
+        print("Data Collected!!")
+        rgb_image = self.bridge.imgmsg_to_cv2(self.data.rgb, desired_encoding="passthrough")
+        depth_image = self.bridge.imgmsg_to_cv2(self.data.depth, desired_encoding="passthrough")
+        cv2.imwrite(self.save_folder + str(self.counter) + '_rgb.png', rgb_image)
+        cv2.imwrite(self.save_folder + str(self.counter) + '_depth.png', depth_image)
+        posit = self.data.pose.position
+        orient = self.data.pose.orientation
+        lin = self.data.twist.linear
+        ang = self.data.twist.angular
+        arr = [self.counter, posit.x, posit.y, posit.z, orient.w, orient.x, orient.y, orient.z, lin.x, lin.y, lin.z, ang.x, ang.y, ang.z, self.data.grip, time.time()]
+        self.writer.writerow(arr)
+        self.data = self.Data(pose=None, twist=None, grip=None, rgb=None, depth=None)
+        self.counter += 1
       rate.sleep()
-
-  def init_toggle(self):
-    toggle_sub = rospy.Subscriber('/unity_learning_record', String, self.toggle_callback)
 
   def init_listeners(self):
     # The Topics we are Subscribing to for data
@@ -97,9 +87,6 @@ class ImitateRecorder():
     self.rgb_state_sub.unregister()
     self.depth_state_sub.unregister()
     self.gripper_state_sub.unregister()
-
-  def toggle_callback(self, val):
-    self.toggle_collection(val.data)
 
   def pose_callback(self, pose):
     if None in self.data:
@@ -124,3 +111,5 @@ class ImitateRecorder():
 if __name__ == '__main__':
   task = sys.argv[1]
   recorder = ImitateRecorder(task)
+  recorder.toggle_collection("1")
+  recorder.toggle_collection("0")
