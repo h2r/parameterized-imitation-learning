@@ -18,8 +18,8 @@ class ImitateRecorder():
   def __init__(self, task):
     rospy.init_node('imitate_recorder2', log_level=rospy.DEBUG)
     # Create the appropriate directory in the datas for the task we are training
-    if not os.path.exists('datas/' + task + '/'):
-      os.mkdir('datas/' + task + '/')
+    if not os.path.exists('../datas/' + task + '/'):
+      os.mkdir('../datas/' + task + '/')
     self.save_folder = None # The specific folder
     self.writer = None # The writer to create our txt files
     self.text_file = None # The file that we are writing to currently
@@ -41,7 +41,7 @@ class ImitateRecorder():
         self.text_file = None
       print("-----Stop Recording-----")
     else:
-      save_folder = 'datas/' + task + '/' + str(time.time()) + '/'
+      save_folder = '../datas/' + task + '/' + str(time.time()) + '/'
       os.mkdir(save_folder)
       self.save_folder = save_folder
       self.text_file = open(save_folder + 'vectors.txt', 'w')

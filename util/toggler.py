@@ -19,7 +19,7 @@ def toggle(value):
 			is_recording = False
 	elif value.data is "1":
 		if not is_recording:
-			p = subprocess.Popen(["./record_movo_v2.py", task])
+			p = subprocess.Popen(["./record.py", task])
 			is_recording = True
 
 rospy.init_node('imitate_toggler', log_level=rospy.DEBUG)
