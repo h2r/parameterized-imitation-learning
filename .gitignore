@@ -1,1 +1,4 @@
 /datas/
+/clean_datas/
+/results/
+*.txt
