@@ -83,8 +83,7 @@ class ImitateEnv(robot_env.RobotEnv):
         utils.mocap_set_action(self.sim, action)
 
     def _get_obs(self):
- ctuators it copies the action into mujoco ctrl field.
-    For position actuators it sets the target       """
+        """
         This is where I make sure to grab the observations for the position and the velocities. Potential
         area to grab the rgb and depth images.
         """
