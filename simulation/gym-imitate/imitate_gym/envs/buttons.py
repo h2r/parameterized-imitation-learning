@@ -3,10 +3,11 @@ import numpy as np
 from gym import utils
 from imitate_gym.envs import imitate_env
 
-MODEL_XML_PATH = os.path.join('fetch', 'pick_and_place.xml')
-
+#MODEL_XML_PATH = os.path.join('fetch', 'pick_and_place.xml')
+HOME = '/home/jonathanchang/parameterized-imitation-learning/simulation/gym-imitate/imitate_gym/envs'
+MODEL_XML_PATH = HOME+'/assets/buttons/pick_and_place.xml'
 class ButtonsEnv(imitate_env.ImitateEnv, utils.EzPickle):
-    def __init__(self, reward_type='sparse'):
+    def __init__(self, reward_type='dense'):
         initial_qpos = {
             'robot0:slide0': 0.405,
             'robot0:slide1': 0.48,

@@ -111,9 +111,9 @@ class ImitateEnv(robot_env.RobotEnv):
         lookat = self.sim.data.body_xpos[body_id]
         for idx, value in enumerate(lookat):
             self.viewer.cam.lookat[idx] = value
-        self.viewer.cam.distance = 2.5
-        self.viewer.cam.azimuth = 132.
-        self.viewer.cam.elevation = -14.
+        self.viewer.cam.distance = 1.5
+        self.viewer.cam.azimuth = 180.
+        self.viewer.cam.elevation = -50.
 
     def _sample_goal(self):
         """
