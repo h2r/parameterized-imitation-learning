@@ -34,7 +34,7 @@ for _ in range(10000):
     if curr_pos is None:
         obs, reward, done, info = env.step([0.,0.,-0.005,0.,0.,0.,0.,0.])
         curr_pos = obs['achieved_goal']
-        slope = calc_changes(curr_pos, GOAL)
+        slope = calc_changes(curr_pos, GOAL_22)
     else:
         other = np.array([0.,0.,0.,0.,0.])
         slope = next_move(curr_pos, GOAL_22, slope)

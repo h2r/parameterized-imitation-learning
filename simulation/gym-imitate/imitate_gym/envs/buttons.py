@@ -15,6 +15,6 @@ class ButtonsEnv(imitate_env.ImitateEnv, utils.EzPickle):
         }
         target = np.array([1.25, 0.53, 0.4])
         imitate_env.ImitateEnv.__init__(
-            self, model_path=MODEL_XML_PATH, n_substeps=2, initial_qpos=initial_qpos, reward_type=reward_type,
+            self, model_path=MODEL_XML_PATH, n_substeps=25, initial_qpos=initial_qpos, reward_type=reward_type,
             distance_threshold=0.05, gripper_extra_height=0.2, target=target)
         utils.EzPickle.__init__(self)
