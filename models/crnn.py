@@ -37,9 +37,9 @@ class SpatialCRNN(nn.Module):
         self.num_layers = num_layers
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2)
-        self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2)
-        self.bn1 = nn.BatchNorm2d(80)
-        self.layer2 = nn.Conv2d(80, 32, kernel_size=1)
+        #self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.layer2 = nn.Conv2d(64, 32, kernel_size=1)
         self.bn2 = nn.BatchNorm2d(32)
         self.layer3 = nn.Conv2d(32, 32, kernel_size=3)
         self.bn3 = nn.BatchNorm2d(32)
@@ -68,15 +68,15 @@ class SpatialCRNN(nn.Module):
 
     def forward(self, inputs):
         rgb = inputs[0]
-        depth = inputs[1]
-        eofs = inputs[2]
-        taus = inputs[3]
+        #depth = inputs[1]
+        eofs = inputs[1]
+        taus = inputs[2]
         bs, seq_len, _ = taus.shape
         seq = torch.ones((bs, seq_len, self.hidden_dim), dtype=torch.float32, device=self.device)
         for i in range(seq_len):
-            x_rgb = self.layer1_rgb(rgb[:,i,:,:,:])
-            x_depth = self.layer1_depth(depth[:,i,:,:,:])
-            x = F.relu(self.bn1(torch.cat([x_rgb, x_depth], dim=1)))
+            x = F.relu(self.bn1(self.layer1_rgb(rgb[:,i,:,:,:])))
+            #x_depth = self.layer1_depth(depth[:,i,:,:,:])
+            #x = F.relu(self.bn1(torch.cat([x_rgb, x_depth], dim=1)))
             x = F.relu(self.bn2(self.layer2(x)))
             x = F.relu(self.bn3(self.layer3(x)))
             x = F.relu(self.bn4(self.layer4(x)))
@@ -135,9 +135,11 @@ class AttentionCRNN(nn.Module):
 
     def forward(self, inputs):
         rgb = inputs[0]
-        depth = inputs[1]
-        eofs = inputs[2]
-        taus = inputs[3]
+        #depth = inputs[1]
+        #eofs = inputs[2]
+        #taus = inputs[3]
+        eofs = inputs[1]
+        taus = inputs[2]
         bs, seq_len, _ = taus.shape
         seq = torch.ones((bs, seq_len, 53), dtype=torch.float32, device="cuda:0")
         for i in range(seq_len):
@@ -268,25 +270,28 @@ class CRNNDataset(Dataset):
         element = self.data[idx]
         # Sequence of Data
         tau = [element["tau"] for _ in range(self.seq_len)]
-        rgb_files = [element["root"]+"/"+str(element["seq"][i])+"_rgb.png" for i in range(self.seq_len)]
-        depth_files = [element["root"]+"/"+str(element["seq"][i])+"_depth.png" for i in range(self.seq_len)]
-        rgb_images, depth_images = [], []
-        for rgb, depth in zip(rgb_files, depth_files):
+        rgb_files = [element["root"]+"/"+str(element["seq"][i])+".png" for i in range(self.seq_len)]
+        #depth_files = [element["root"]+"/"+str(element["seq"][i])+"_depth.png" for i in range(self.seq_len)]
+        #rgb_images, depth_images = [], []
+        #for rgb, depth in zip(rgb_files, depth_files):
+        rgb_images = []
+        for rgb in rgb_files:
             rgb_image = Image.open(rgb)
-            depth_image = Image.open(depth)
+            #depth_image = Image.open(depth)
             rgb_image = np.asarray(rgb_image).astype(float)
-            depth_image = np.asarray(depth_image).astype(float)
+            #depth_image = np.asarray(depth_image).astype(float)
             rgb_image = np.reshape(rgb_image, (3, rgb_image.shape[0], -1))
-            depth_image = np.reshape(depth_image, (1, depth_image.shape[0], -1))
+            #depth_image = np.reshape(depth_image, (1, depth_image.shape[0], -1))
             # Normalize
             rgb_image = (2*(rgb_image - np.amin(rgb_image))/(np.amax(rgb_image)-np.amin(rgb_image)))-1
             # Create the sequences
             rgb_images.append(rgb_image)
-            depth_images.append(depth_image)
+            #depth_images.append(depth_image)
         #return rgb_image, depth_image, np.array(eval(element["eof"])), np.array(eval(element["tau"])), (np.array(eval(element["label"])), eval(element["gripper"]))
-        return (np.array(rgb_images), np.array(depth_images), np.array(element["eof"]), np.array(tau)), (np.array(element["label"]), np.array(element["aux_label"]))
+        return (np.array(rgb_images), np.array(element["eof"]), np.array(tau)), (np.array(element["label"]), np.array(element["aux_label"]))
+        #return (np.array(rgb_images), np.array(depth_images), np.array(element["eof"]), np.array(tau)), (np.array(element["label"]), np.array(element["aux_label"]))
 
-def train(root_dir, name, device="cuda:1", num_epochs=1000, bs=64, lr=0.0001, seq_len=5, weight=None, dest=None):
+def train(root_dir, name, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, seq_len=5, weight=None, dest=None):
     curr_time = time.time()
     modes = ["train", "test"]
     costs = {mode: [] for mode in modes}
@@ -315,13 +320,13 @@ def train(root_dir, name, device="cuda:1", num_epochs=1000, bs=64, lr=0.0001, se
                     loss = criterion(out, targets)
                     loss.backward()
                     optimizer.step()
-                    running_loss = running_loss + (loss.data[0]*bs)
+                    running_loss = running_loss + (loss.item()*bs)
                 elif mode == "test":
                     model.eval()
                     with torch.no_grad():
                         out = model(inputs)
                         loss = criterion(out, targets)
-                        running_loss = running_loss + (loss.data[0]*bs)
+                        running_loss = running_loss + (loss.item()*bs)
             cost = running_loss/data_sizes[mode]
             print("{} Loss: {}".format(mode, cost))
             # Print the cost and accuracy every 10 epoch
@@ -331,7 +336,7 @@ def train(root_dir, name, device="cuda:1", num_epochs=1000, bs=64, lr=0.0001, se
                 min_test_loss = cost
                 torch.save(model.state_dict(), dest + name+".pt")
                 torch.save(optimizer.state_dict(), dest + name + ".pt")
-            if epoch % 25 == 0: 
+            if epoch % 25 == 0 and epoch > 150: 
                 torch.save(model.state_dict(), dest + name + "_"+str(epoch)+".pt")
                 torch.save(optimizer.state_dict(), dest + name + "_optim_" + str(epoch) + ".pt")
     # Save the Model
@@ -362,7 +367,7 @@ if __name__ == '__main__':
     #    print(targets[1].shape)
     #    break 
     prev = time.time()
-    train(root_dir, name, device=device, num_epochs=1000, dest=dest, seq_len=10)
+    train(root_dir, name, device=device, num_epochs=300, dest=dest, seq_len=10)
     print("Training Took {} hours".format((time.time() - prev)/3600))
 
     # model = AttentionCRNN(rtype="GRU", num_layers=2)

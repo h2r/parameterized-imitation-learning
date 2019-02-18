@@ -96,23 +96,28 @@ def parse_param_2(root_dir, mode, cases, tau, seq_len, split_percen, dest, direc
                 vectors = pd.read_csv(root+"/"+file[-1], header=-1)
                 # We will start from 10 to start creating a sequential dataset (rgb, depth)
                 # The length of the history will be 5 
-                for i in range((seq_len*2)-2, len(pics), 2):
+                #for i in range((seq_len*2)-2, len(pics), 2):
+                for i in range(seq_len-1, len(pics)):
                     # First get the current directory
-                    row = [root, int(pics[i][:-10]), tau[0], tau[1]]
+                    row = [root, int(pics[i][:-4]), tau[0], tau[1]]
+                    #row = [root, int(pics[i][:-10]), tau[0], tau[1]]
                     #depth = [root+"/"+pics[i-j] for j in range(seq_len,-1,-2)]
                     #rgb = [root+"/"+pics[i-j+1] for j in range(seq_len,-1,-2)]
                     #tau = [tau for _ in range(seq_len)]
                     #print(pics)
 		    #print(i)
                     #print([pics[i-j] for j in range(seq_len*2, -1, -2)])
-                    prevs = [int(pics[i-j][:-10]) for j in range((seq_len*2)-2, -1, -2)]
+                    prevs = [int(pics[i-j][:-4]) for j in range(seq_len-1, -1, -1)]
+                    #prevs = [int(pics[i-j][:-10]) for j in range((seq_len*2)-2, -1, -2)]
                     eof = []
                     for prev in prevs:
                         pos = [float(vectors[vectors[0]==prev][j]) for j in range(1,4)]
                         eof += pos
                     ## Label and Gripper still stay the same
-                    label = [float(vectors[vectors[0]==float(pics[i][:-10])][j]) for j in range(8,14)]
-                    aux_label = [float(vectors[vectors[0]==float(pics[-2][:-10])][j]) for j in range(1,8)]
+                    label = [float(vectors[vectors[0]==float(pics[i][:-4])][j]) for j in range(8,14)]
+                    aux_label = [float(vectors[vectors[0]==float(pics[-1][:-4])][j]) for j in range(1,8)]
+                    #label = [float(vectors[vectors[0]==float(pics[i][:-10])][j]) for j in range(8,14)]
+                    #aux_label = [float(vectors[vectors[0]==float(pics[-2][:-10])][j]) for j in range(1,8)]
                     #print(label)
                     row += prevs
                     row += label
@@ -190,21 +195,13 @@ def clean_data(root_dir, cases):
                 os.rmdir(sub_dir)
 
 if __name__ == '__main__':
-    #cases = ["/case_00_down", "/case_00_left", "/case_00_right", "/case_00_up", "/case_01_down", "/case_01_left", "/case_01_right", "/case_01_up", "/case_02_down", "/case_02_left", "/case_02_right", "/case_02_up"]
-    #tau = [[200, 150], [200, 150], [200, 150], [200, 150], [400, 150], [400, 150], [400, 150], [400, 150], [600, 150], [600, 150], [600, 150], [600, 150]]
-    #cases = ['/new_down', '/new_left', '/new_right', '/new_up']
-    #tau = [[200, 150], [200, 150], [200, 150], [200, 150]]
-    #cases = ['/33_buttons']
-    #cases = ['/00_buttons', '/03_buttons', '/30_buttons', '/33_buttons', '/11_buttons', '/22_buttons']
-    #cases = ['/11_buttons']
-    cases = ['/33_buttons','/11_buttons', '/00_buttons', '/22_buttons', '/30_buttons', '/03_buttons','/21_buttons', '/12_buttons']
-    #tau = [[3,3], [1,1], [0,0], [2,2], [3,0], [0,3]]
-    tau = [[0,0],[0,3],[3,0],[3,3],[1,1],[2,2],[2,1],[1,2]]
-    #tau = [[1,1]]
-    #directions = [0, 1, 2, 3]
-    root_dir = sys.argv[1]
-    modes = ["train", "test"]
+    #tau = [[71,77],[91,77],[81,83],[70,89],[92,89]]
+    #cases = ['/goal_00', '/goal_02', '/goal_11', '/goal_20', '/goal_22']
+    tau = [[81,77], [71,83], [91,83], [81,89]]
+    cases = ['/goal_01', '/goal_10', '/goal_12', '/goal_21']
+    modes = ["test"]
     seq_len = 10
+    root_dir = sys.argv[1]
     split_percen = sys.argv[2]
     dest = sys.argv[3]
     #clean_data(root_dir, cases)

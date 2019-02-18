@@ -12,6 +12,8 @@ tqdm = "*"
 imageio = "*"
 mujoco-py = "<1.50.2,>=1.50.1"
 gym = "*"
+pandas = "*"
+torchvision = "*"
 
 [requires]
 python_version = "3.5"

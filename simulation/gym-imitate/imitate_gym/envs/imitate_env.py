@@ -1,5 +1,7 @@
 import numpy as np
+import random
 import gym
+import mujoco_py
 from gym import error, spaces, utils
 from gym.envs.robotics import rotations, robot_env, utils
 
@@ -25,21 +27,47 @@ class ImitateEnv(robot_env.RobotEnv):
               n_substeps (int): number of substeps the simulation runs on every call to step
               initial_qpos (dict): a dictionary of joint names and values that define the initial configuration
               reward_type ('sparse' or 'dense'): the reward type, i.e. sparse or dense
-        self.target = target
-        srray([-0.498, 0.005, -0.431 + self.gripper_extra_height]) + self.sim.data.get_site_xpos('robot0:grip')elf.target = target
               distance_threshold (float): the threshold after which a goal is considered achieved
+              target (list): the target position that we are aiming for
+              gripper_extra_height (float): the gripper offset in position 
         """
-        # initial_qpos = 8 for [pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, rot_w, gripper]
+        # n_actions = 8 for [pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, rot_w, gripper]
 
         self.reward_type = reward_type
         self.distance_threshold = distance_threshold
         self.target = target
         self.gripper_extra_height = gripper_extra_height
-
+        self._viewers = {}
+        self.initial_qpos = initial_qpos
         super(ImitateEnv, self).__init__(model_path=model_path,
                                          n_substeps=n_substeps,
                                          n_actions=8,
                                          initial_qpos=initial_qpos)
+    # Env Method
+    # --------------------------------------------------
+    def render(self, mode='human'):
+        self._render_callback()
+        if mode == 'rgb_array':
+            self._get_viewer(mode).render(1000,1000)
+            rgb = self._get_viewer(mode).read_pixels(1000, 1000, depth=False)
+            #rgbd = self._get_viewer(mode).read_pixels(1000, 1000, depth=True)
+            #rgb = rgbd[0][::-1,:,:]
+            #depth = rgbd[1]
+            #depth = (depth-np.amin(depth))*(255/(np.amax(depth)-np.amin(depth)))
+            return rgb[::-1,:,:]
+        elif mode == 'human':
+            self._get_viewer(mode).render()
+
+    def _get_viewer(self, mode):
+        self.viewer = self._viewers.get(mode)
+        if self.viewer is None:
+            if mode == 'human':
+                self.viewer = mujoco_py.MjViewer(self.sim)
+            elif mode == 'rgb_array':
+                self.viewer = mujoco_py.MjRenderContextOffscreen(self.sim, device_id=-1)
+            self._viewer_setup()
+            self._viewers[mode] = self.viewer
+        return self.viewer
     # GoalEnv Method
     # --------------------------------------------------
     def compute_reward(self, achieved_goal, goal, info):
@@ -51,6 +79,7 @@ class ImitateEnv(robot_env.RobotEnv):
 
     # RobotEnv Methods
     # --------------------------------------------------
+
     def _step_callback(self):
         """
         In the step function in the RobotEnv it does: 1) self._set_action(action)
@@ -111,9 +140,9 @@ class ImitateEnv(robot_env.RobotEnv):
         lookat = self.sim.data.body_xpos[body_id]
         for idx, value in enumerate(lookat):
             self.viewer.cam.lookat[idx] = value
-        self.viewer.cam.distance = 1.5
+        self.viewer.cam.distance = 1.7
         self.viewer.cam.azimuth = 180.
-        self.viewer.cam.elevation = -50.
+        self.viewer.cam.elevation = -30.
 
     def _sample_goal(self):
         """
@@ -126,6 +155,9 @@ class ImitateEnv(robot_env.RobotEnv):
         return (d < self.distance_threshold).astype(np.float32)
 
     def _env_setup(self, initial_qpos):
+        # Randomize the starting position
+        shoulder_pan_val = -0.1 + (random.random()*0.2)
+        initial_qpos['robot0:shoulder_pan_joint'] = shoulder_pan_val
         for name, value in initial_qpos.items():
             self.sim.data.set_joint_qpos(name, value)
         utils.reset_mocap_welds(self.sim)
