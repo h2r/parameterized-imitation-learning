@@ -5,7 +5,7 @@ from imitate_gym.envs import imitate_env
 
 #MODEL_XML_PATH = os.path.join('fetch', 'pick_and_place.xml')
 HOME = '/home/jonathanchang/parameterized-imitation-learning/simulation/gym-imitate/imitate_gym/envs'
-MODEL_XML_PATH = HOME+'/assets/buttons/buttons.xml'
+MODEL_XML_PATH = HOME+'/assets/buttons/buttons_3x3.xml'
 class ButtonsEnv(imitate_env.ImitateEnv, utils.EzPickle):
     def __init__(self, reward_type='dense'):
         initial_qpos = {

@@ -101,6 +101,73 @@ class SpatialCRNN(nn.Module):
     def init_hidden_gru(self, bs=64):
         return torch.zeros(2*self.num_layers,bs,self.hidden_dim)
 
+
+class AttentionCRNN(nn.Module):
+    """
+    Using the ideas of attention from "Show, Attend, and Tell"
+    """
+    def __init__(self, hidden_dim=53, num_layers=1, rtype='LSTM'):
+        super(AttentionCRNN, self).__init__()
+
+        # For the LSTM/GRU
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        # Note that all of the layers have valid padding
+        self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2)
+        self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2)
+        self.layer2 = nn.Conv2d(80, 32, kernel_size=1)
+        self.layer3 = nn.Conv2d(32, 32, kernel_size=3)
+        self.layer4 = nn.Conv2d(32, 32, kernel_size=3)
+        self.spatial_softmax = SpatialSoftmax(53, 73, 32)
+        self.fl1 = nn.Linear(64, 50)
+        # This is where we will enter the features along with the EOF history and tau history to the Recurrent Network
+        # 50 + 3 (EOF [x,y,z]) + 2 (tau [pixel_x, pixel_y])
+        if rtype == 'LSTM':
+            self.r_layer = nn.LSTM(self.hidden_dim, 50, num_layers=self.num_layers, batch_first=True)
+            self.hidden = self.init_hidden_lstm()
+        elif rtype == 'GRU':
+            self.r_layer = nn.GRU(self.hidden_dim, 50, num_layers=self.num_layers, batch_first=True, bidirectional=True)
+            self.hidden = self.init_hidden_gru()
+        # Take the output from the LSTM and then put through fully connected layers
+        self.fl2 = nn.Linear(100, 50)
+        self.output = nn.Linear(50, 6)
+        #self.gripper_out = nn.Linear(30, 2)
+
+    def forward(self, inputs):
+        rgb = inputs[0]
+        #depth = inputs[1]
+        #eofs = inputs[2]
+        #taus = inputs[3]
+        eofs = inputs[1]
+        taus = inputs[2]
+        bs, seq_len, _ = taus.shape
+        seq = torch.ones((bs, seq_len, 53), dtype=torch.float32, device="cuda:0")
+        for i in range(seq_len):
+            x_rgb = self.layer1_rgb(rgb[:,i,:,:,:])
+            x_depth = self.layer1_depth(depth[:,i,:,:,:])
+            x = F.relu(torch.cat([x_rgb, x_depth], dim=1))
+            x = F.relu(self.layer2(x))
+            x = F.relu(self.layer3(x))
+            x = F.relu(self.layer4(x))
+            print(x.shape)
+            break
+            #x = self.spatial_softmax(x)
+        #     x = F.relu(self.fl1(x))
+        #     x = torch.cat([x, eofs[:,i,:]], 1)
+        #     seq[:,i,:] = x
+        # output, self.hidden = self.r_layer(seq)
+        # print(self.hidden.shape)
+        # output = output.view(bs,5,2,50)
+        # output = F.relu(torch.cat([output[:,4,0,:], output[:,4,1,:]], dim=1))
+        # output = F.relu(self.fl2(output))
+        # return self.output(output)
+
+    def init_hidden_lstm(self, bs=64):
+        return (torch.zeros(self.num_layers,bs,self.hidden_dim), torch.zeros(1,bs,self.hidden_dim))
+
+    def init_hidden_gru(self, bs=64):
+        return torch.zeros(2*self.num_layers,bs,self.hidden_dim)
+
 class SpatialSoftmax(nn.Module):
     """
     Spatial Softmax Implementation
@@ -221,7 +288,7 @@ class CRNNDataset(Dataset):
             rgb_images.append(rgb_image)
             #depth_images.append(depth_image)
         #return rgb_image, depth_image, np.array(eval(element["eof"])), np.array(eval(element["tau"])), (np.array(eval(element["label"])), eval(element["gripper"]))
-        return (np.array(rgb_images), np.array(element["eof"]), np.array(tau)), (np.array(element["label"])*10000, np.array(element["aux_label"]))
+        return (np.array(rgb_images), np.array(element["eof"]), np.array(tau)), (np.array(element["label"]), np.array(element["aux_label"]))
         #return (np.array(rgb_images), np.array(depth_images), np.array(element["eof"]), np.array(tau)), (np.array(element["label"]), np.array(element["aux_label"]))
 
 def train(root_dir, name, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, seq_len=5, weight=None, dest=None):
@@ -268,8 +335,8 @@ def train(root_dir, name, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, se
             if mode == 'test' and cost <= min_test_loss:
                 min_test_loss = cost
                 torch.save(model.state_dict(), dest + name+".pt")
-                torch.save(optimizer.state_dict(), dest + name + "_optim.pt")
-            if epoch % 25 == 0 and epoch > 100: 
+                torch.save(optimizer.state_dict(), dest + name + ".pt")
+            if epoch % 25 == 0 and epoch > 150: 
                 torch.save(model.state_dict(), dest + name + "_"+str(epoch)+".pt")
                 torch.save(optimizer.state_dict(), dest + name + "_optim_" + str(epoch) + ".pt")
     # Save the Model
@@ -289,7 +356,23 @@ if __name__ == '__main__':
     device = "cuda:{}".format(sys.argv[2])
     name = sys.argv[3]
     dest = sys.argv[4]
-
+    #dataset = CRNNDataset(root_dir, 'train', 5) 
+    #dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=6)
+    #for inputs, targets in dataloader:
+    #    print(inputs[0].shape)
+    #    print(inputs[1].shape)
+    #    print(inputs[2].shape)
+    #    print(inputs[3].shape)
+    #    print(targets[0].shape)
+    #    print(targets[1].shape)
+    #    break 
     prev = time.time()
     train(root_dir, name, device=device, num_epochs=300, dest=dest, seq_len=10)
     print("Training Took {} hours".format((time.time() - prev)/3600))
+
+    # model = AttentionCRNN(rtype="GRU", num_layers=2)
+    # dataset = CRNNDataset(root_dir, "test")
+    # dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=6)
+    # for rgb, depth, eof, tau, target in dataloader:
+    #     output = model([rgb.float(), depth.float(), eof.float(), tau.float()])
+    #     break

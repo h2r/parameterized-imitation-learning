@@ -140,11 +140,18 @@ def run(env, goal, trial_dir, viz=False):
                     goal_reached = True
                 action = np.concatenate([slope,other])
                 obs, _, _, _ = env.step(action)
+                print("==================")
+                print(slope)
+                print(obs['observation'][7:10])
                 curr_pos = obs['achieved_goal']
+                print(curr_pos)
             elif curr_pos is not None and goal_reached is True:
                 # This is to simulate the terminal state where the user would stop near the end
                 counter += 1
                 obs, _, _, _ = env.step([0.,0.,0.,0.,0.,0.,0.,0.])
+                print("==================")
+                print(slope)
+                print(obs['observation'][7:10])
                 if counter == 20:
                     break
 
@@ -171,4 +178,4 @@ def main(task_name, num_trials=300, viz=False):
         trial_counter+=1
 
 if __name__ == '__main__':
-    main("buttons3x5", num_trials=300, viz=False)
+    main("buttons3x5", num_trials=1, viz=True)
