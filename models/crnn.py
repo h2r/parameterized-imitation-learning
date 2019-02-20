@@ -224,7 +224,7 @@ class CRNNDataset(Dataset):
         return (np.array(rgb_images), np.array(element["eof"]), np.array(tau)), (np.array(element["label"])*10000, np.array(element["aux_label"]))
         #return (np.array(rgb_images), np.array(depth_images), np.array(element["eof"]), np.array(tau)), (np.array(element["label"]), np.array(element["aux_label"]))
 
-def train(root_dir, name, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, seq_len=5, weight=None, dest=None):
+def train(root_dir, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, seq_len=5, weight=None, dest=None):
     curr_time = time.time()
     modes = ["train", "test"]
     costs = {mode: [] for mode in modes}
@@ -242,6 +242,7 @@ def train(root_dir, name, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, se
     for epoch in range(1, num_epochs+1):
         for mode in modes:
             running_loss = 0.0
+            train_loss = 0.0
             for inputs, targets in tqdm(dataloaders[mode], desc='{}:{}/{}'.format(mode, epoch, num_epochs), ascii=True):
                 bs = inputs[0].shape[0]
                 inputs = [x.float().cuda(device) for x in inputs]
@@ -261,19 +262,27 @@ def train(root_dir, name, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, se
                         loss = criterion(out, targets)
                         running_loss = running_loss + (loss.item()*bs)
             cost = running_loss/data_sizes[mode]
+            if mode == 'train':
+                train_loss = cost
             print("{} Loss: {}".format(mode, cost))
             # Print the cost and accuracy every 10 epoch
             if epoch % 5 == 0:
                 costs[mode].append(cost)
             if mode == 'test' and cost <= min_test_loss:
                 min_test_loss = cost
-                torch.save(model.state_dict(), dest + name+".pt")
-                torch.save(optimizer.state_dict(), dest + name + "_optim.pt")
-            if epoch % 25 == 0 and epoch > 100: 
-                torch.save(model.state_dict(), dest + name + "_"+str(epoch)+".pt")
-                torch.save(optimizer.state_dict(), dest + name + "_optim_" + str(epoch) + ".pt")
-    # Save the Model
-    # torch.save(model.state_dict(), "results/reach/case_00_"+str(num_epochs))
+                torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'test_loss': cost,
+                    'train_loss': train_loss}, dest +"lowest.pt")
+            if epoch % 25 == 0 and epoch > 100:
+                torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'test_loss': cost,
+                    'train_loss': train_loss}, dest + str(epoch) + ".pt")
 
     # plot the cost
     x = np.arange(0, len(costs["train"]))
@@ -282,14 +291,13 @@ def train(root_dir, name, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, se
     plt.xlabel("Epochs")
     plt.title("Learning rate = " + str(lr))
     plt.legend(["Training", "Testing"])
-    plt.savefig(dest + name + ".png")
+    plt.savefig(dest + "loss.png")
 
 if __name__ == '__main__':
     root_dir = sys.argv[1]
-    device = "cuda:{}".format(sys.argv[2])
-    name = sys.argv[3]
-    dest = sys.argv[4]
+    dest = sys.argv[2]
+    device = "cuda:{}".format(sys.argv[3])
 
     prev = time.time()
-    train(root_dir, name, device=device, num_epochs=300, dest=dest, seq_len=10)
+    train(root_dir, device=device, num_epochs=300, dest=dest, seq_len=10)
     print("Training Took {} hours".format((time.time() - prev)/3600))
