@@ -275,14 +275,14 @@ def train(root_dir, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, seq_len=
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'test_loss': cost,
-                    'train_loss': train_loss}, dest +"lowest.pt")
+                    'train_loss': train_loss}, dest +"/lowest.pt")
             if epoch % 25 == 0 and epoch > 100:
                 torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'test_loss': cost,
-                    'train_loss': train_loss}, dest + str(epoch) + ".pt")
+                    'train_loss': train_loss}, dest +"/" + str(epoch) + ".pt")
 
     # plot the cost
     x = np.arange(0, len(costs["train"]))
@@ -291,7 +291,7 @@ def train(root_dir, device="cuda:0", num_epochs=1000, bs=64, lr=0.0001, seq_len=
     plt.xlabel("Epochs")
     plt.title("Learning rate = " + str(lr))
     plt.legend(["Training", "Testing"])
-    plt.savefig(dest + "loss.png")
+    plt.savefig(dest + "/loss.png")
 
 if __name__ == '__main__':
     root_dir = sys.argv[1]

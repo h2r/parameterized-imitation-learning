@@ -19,42 +19,6 @@ from tqdm import tqdm
 
 splits = {}
 
-def parse_param_(root_dir, mode, cases, tau, directions):
-    global splits
-    file = open(root_dir+"/"+ mode + "_data.csv", "w+")
-    writer = csv.writer(file, delimiter='\t')
-    #cases = ["/test_00", "/test_01", "/test_02", "/test_10", "/test_11", "/test_12", "/test_20", "/test_21", "/test_22"]
-    #tau = [[200, 150], [400, 150], [600, 150], [200, 300], [400, 300], [600, 300], [200, 450], [400, 450], [600 ,450]]
-    for case, tau, direction in tqdm(zip(cases, tau, directions)):
-        if case not in splits.keys():
-            dirs = [x[0] for x in os.walk(root_dir + case)][1:]
-            shuffle(dirs)
-            split_idx = int(math.ceil(len(dirs)*float(sys.argv[2])))
-            splits[case] = {"train": dirs[:split_idx], "test": dirs[split_idx:]}
-        sub_dirs = splits[case]
-        for sub_dir in sub_dirs[mode]:
-            for root, _, file in os.walk(sub_dir):
-                file = sorted(file)
-                print(file)
-                #vectors = pd.read_csv(root+"/"+file[-1], header=-1)
-                #for i in range(0, len(file)-1, 2):
-                #    prevs = []
-                #    eof = []
-                #    if i < seq_len:
-                #        repeat = int(5-(0.5*i))
-                #        prevs += [float(file[0][:-10]) for j in range(repeat)]
-                #        prevs += [float(file[i-j][:-10]) for j in range(i, 1, -2)]
-                #    else:
-                #        prevs += [float(file[i-j][:-10]) for j in range(10, 1, -2)]
-                #    for prev in prevs:
-                #        pos = np.array([float(vectors[vectors[0]==prev][j]) for j in range(1,4)])
-                #        eof.append(pos)
-                #    eof = repr(list(np.array(eof).flatten()))
-                #    label = repr([float(vectors[vectors[0]==float(file[i][:-10])][j]) for j in range(8,14)])
-                #    gripper = repr(int(vectors[vectors[0]==float(file[i][:-10])][14]))
-                #    writer.writerow([root+"/"+file[i], root+"/"+file[i+1], eof, label, gripper, repr(tau), direction])
-    print("{} Data Creation Done".format(mode))
-
 def preprocess_images(root_diri, cases):
     for case in cases:
          dirs = [x[0] for x in os.walk(root_dir + case)]
@@ -97,7 +61,7 @@ def parse_param_2(root_dir, mode, cases, tau, seq_len, split_percen, dest, direc
                 # We will start from 10 to start creating a sequential dataset (rgb, depth)
                 # The length of the history will be 5 
                 #for i in range((seq_len*2)-2, len(pics), 2):
-                for i in range(seq_len-1, len(pics)):
+                for i in range(0, len(pics)):
                     # First get the current directory
                     row = [root, int(pics[i][:-4]), tau[0], tau[1]]
                     #row = [root, int(pics[i][:-10]), tau[0], tau[1]]
@@ -107,7 +71,13 @@ def parse_param_2(root_dir, mode, cases, tau, seq_len, split_percen, dest, direc
                     #print(pics)
 		    #print(i)
                     #print([pics[i-j] for j in range(seq_len*2, -1, -2)])
-                    prevs = [int(pics[i-j][:-4]) for j in range(seq_len-1, -1, -1)]
+                    if i == 0:
+                        prevs = [int(pics[i][:-4]) for _ in range(seq_len)]
+                    elif i != 0 and i < seq_len:
+                        prevs.pop(0)
+                        prevs.append(int(pics[i][:-4]))
+                    else:
+                        prevs = [int(pics[i-j][:-4]) for j in range(seq_len-1, -1, -1)]
                     #prevs = [int(pics[i-j][:-10]) for j in range((seq_len*2)-2, -1, -2)]
                     eof = []
                     for prev in prevs:
@@ -195,11 +165,11 @@ def clean_data(root_dir, cases):
                 os.rmdir(sub_dir)
 
 if __name__ == '__main__':
-    #tau = [[71,77],[91,77],[81,83],[70,89],[92,89]]
-    #cases = ['/goal_00', '/goal_02', '/goal_11', '/goal_20', '/goal_22']
-    tau = [[81,77], [71,83], [91,83], [81,89]]
-    cases = ['/goal_01', '/goal_10', '/goal_12', '/goal_21']
-    modes = ["test"]
+    tau = [[71,77],[91,77],[81,83],[70,89],[92,89]]
+    cases = ['/goal_00', '/goal_02', '/goal_11', '/goal_20', '/goal_22']
+    #tau = [[81,77], [71,83], [91,83], [81,89]]
+    #cases = ['/goal_01', '/goal_10', '/goal_12', '/goal_21']
+    modes = ["train"]
     seq_len = 10
     root_dir = sys.argv[1]
     split_percen = sys.argv[2]
