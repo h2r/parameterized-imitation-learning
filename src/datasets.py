@@ -6,6 +6,7 @@ import h5py
 
 import os.path as osp
 import pyarrow as pa
+import random
 
 class ImitationLMDB(Dataset):
     def __init__(self, dest, mode):
@@ -20,14 +21,17 @@ class ImitationLMDB(Dataset):
             self.length = self.loads_pyarrow(txn.get(b'__len__'))
             self.keys = self.loads_pyarrow(txn.get(b'__keys__'))
 
+        self.shuffled = random.shuffle([i for i in range(self.length)])
+
     def loads_pyarrow(self, buf):
         return pa.deserialize(buf)
 
     def __getitem__(self, idx):
         rgb, depth, eof, tau, aux, target = None, None, None, None, None, None
+        index = self.shuffled[idx]
         env = self.env
         with env.begin(write=False) as txn:
-            byteflow = txn.get(self.keys[idx])
+            byteflow = txn.get(self.keys[index])
 
         # RGB, Depth, EOF, Tau, Aux, Target
         unpacked = self.loads_pyarrow(byteflow)

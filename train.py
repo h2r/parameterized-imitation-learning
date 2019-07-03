@@ -19,7 +19,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
     optimizer = optim.Adam(model.parameters(), lr=lr)
     #model = nn.DataParallel(model)
     datasets = {mode: ImitationLMDB(data_file, mode) for mode in modes}
-    dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
+    dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=False, num_workers=8, pin_memory=True) for mode in modes}
     data_sizes = {mode: len(datasets[mode]) for mode in modes}
     lowest_test_cost = float('inf')
 
@@ -35,8 +35,8 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                 inputs = data[:-2]
                 targets = data[-2:]
                 curr_bs = inputs[0].shape[0]
-                inputs = [x.to(device, non_blocking=True) for x in inputs]
-                targets = [x.to(device, non_blocking=True) for x in targets]
+                inputs = [x.to(device, non_blocking=False) for x in inputs]
+                targets = [x.to(device, non_blocking=False) for x in targets]
                 if mode == "train":
                     model.train()
                     optimizer.zero_grad()
