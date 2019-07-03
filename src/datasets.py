@@ -40,7 +40,7 @@ class ImitationLMDB(Dataset):
         aux = torch.from_numpy(unpacked[4]).type(torch.FloatTensor)
         target = torch.from_numpy(unpacked[5]).type(torch.FloatTensor)
 
-        return [rgb, depth, eof, tau, aux, target]
+        return [rgb, depth, eof, tau, target, aux]
 
     def __len__(self):
         return self.length
