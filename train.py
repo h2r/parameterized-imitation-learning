@@ -18,7 +18,6 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
     criterion = BehaviorCloneLoss().to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     #model = nn.DataParallel(model)
-    data_sizes = {mode: len(datasets[mode]) for mode in modes}
     lowest_test_cost = float('inf')
 
     if weight is not None:
@@ -29,6 +28,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
     for epoch in tqdm.trange(1, num_epochs+1, desc='Epochs'):
         datasets = {mode: ImitationLMDB(data_file, mode) for mode in modes}
         dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=False, num_workers=8, pin_memory=True) for mode in modes}
+        data_sizes = {mode: len(datasets[mode]) for mode in modes}
         for mode in modes:
             running_loss = 0.0
             for data in tqdm.tqdm(dataloaders[mode], desc='{}:{}/{}'.format(mode, epoch, num_epochs),ascii=True):
