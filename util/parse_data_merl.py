@@ -4,6 +4,8 @@ import numpy as np
 import pyarrow as pa
 from PIL import Image
 
+import argparse
+
 def serialize_pyarrow(obj):
     return pa.serialize(obj).to_buffer()
 
@@ -60,3 +62,16 @@ def parse_raw_data_merl(csv_path, dest_path, mode, episode_len=28, write_frequen
         print("Flushing database ...")
         db.sync()
         db.close()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Input to data cleaner')
+    parser.add_argument('-pth', '--csv_path', required=True, help='path to csv file i.e. ./data_train.csv')
+    parser.add_argument('-d', '--dest_path', required=True, help='Destination directory for train.lmdb or test.lmdb i.e. ./data')
+    parser.add_argument('-m', '--mode', required=True, help='train or test i.e. -m train')
+    parser.add_argument('-el', '--episode_len', required=False, default=28, type=int, help='Length of each episode. Default set to 28') 
+    args = parser.parse_args()
+
+    parse_raw_data_merl(args.csv_path,
+                        args.dest_path,
+                        args.mode,
+                        episode_len=args.episode_len)
