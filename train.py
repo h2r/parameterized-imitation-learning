@@ -23,7 +23,12 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
     dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
     data_sizes = {mode: len(datasets[mode]) for mode in modes}
     lowest_test_cost = float('inf')
-    cost_file = open(save_path+"/costs.txt", 'w+')
+    
+    if weight is not None:
+        cost_file = open(save_path+"/costs.txt", 'a')
+    else:
+        cost_file = open(save_path+"/costs.txt", 'w+')
+
     for epoch in tqdm.trange(1, num_epochs+1, desc='Epochs'):
         for mode in modes:
             running_loss = 0.0
