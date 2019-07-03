@@ -191,7 +191,7 @@ class Model2(nn.Module):
     The net implemented from Deep Imitation Learning from Virtual Teleoperation with parameterization
     """
     def __init__(self, is_aux=True, nfilm=1):
-        super(Model, self).__init__()
+        super(Model2, self).__init__()
         self.is_aux = is_aux
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2)
@@ -283,7 +283,7 @@ class Model2(nn.Module):
         # First FILM
         x = self.conv1(x) 
         original_shape = x.shape
-        x = torch.add(torch.mul(spatial_alpha, x.view(original_shape[0], -1)), spatial_beta).view(original_shape)
+        x = torch.add(torch.mul(spatial_alpha1, x.view(original_shape[0], -1)), spatial_beta1).view(original_shape)
         
         # Second FILM
         x = self.conv2(x)
