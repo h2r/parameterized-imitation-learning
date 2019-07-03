@@ -21,7 +21,8 @@ class ImitationLMDB(Dataset):
             self.length = self.loads_pyarrow(txn.get(b'__len__'))
             self.keys = self.loads_pyarrow(txn.get(b'__keys__'))
 
-        self.shuffled = random.shuffle([i for i in range(self.length)])
+        self.shuffled = [i for i in range(self.length)]
+        random.shuffle(self.shuffled)
 
     def loads_pyarrow(self, buf):
         return pa.deserialize(buf)
