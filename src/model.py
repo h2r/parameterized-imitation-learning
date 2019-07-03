@@ -191,7 +191,7 @@ class Model2(nn.Module):
     The net implemented from Deep Imitation Learning from Virtual Teleoperation with parameterization
     """
     def __init__(self, is_aux=True, nfilm=1):
-        super(Model, self).__init__()
+        super(Model2, self).__init__()
         self.is_aux = is_aux
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2)
@@ -323,6 +323,7 @@ class Model2(nn.Module):
         x = torch.add(torch.mul(alpha, x), beta)
         x = self.output(x)
         return x, aux
+
 class BehaviorCloneLoss(nn.Module):
     """
     The Loss function described in the paper
