@@ -17,13 +17,12 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
         model.load_state_dict(torch.load(weight, map_location=device))
     criterion = BehaviorCloneLoss().to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    #model, optimizer = amp.initialize(model, optimizer, opt_level='O0')
     #model = nn.DataParallel(model)
     datasets = {mode: ImitationLMDB(data_file, mode) for mode in modes}
     dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
     data_sizes = {mode: len(datasets[mode]) for mode in modes}
     lowest_test_cost = float('inf')
-    
+
     if weight is not None:
         cost_file = open(save_path+"/costs.txt", 'a')
     else:
@@ -43,8 +42,6 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                     optimizer.zero_grad()
                     out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
                     loss = criterion(out, aux_out, targets[0], targets[1])
-                    # with amp.scale_loss(loss, optimizer) as scaled_loss:
-                    #     scaled_loss.backward()
                     loss.backward()
                     optimizer.step()
                     running_loss += (loss.item()*curr_bs)
