@@ -13,6 +13,48 @@ import argparse
 from PIL import Image
 from apex import amp
 
+import os.path as osp
+import lmdb
+import pyarrow as pa
+
+class ImitationLMDB(Dataset):
+    def __init__(self, dest, mode):
+        super(ImitationLMDB, self).__init__()
+        lmdb_file = osp.join(dest, mode+".lmdb")
+        # Open the LMDB file
+        self.env = lmdb.open(lmdb_file, subdir=osp.isdir(lmdb_file),
+                             readonly=True, lock=False,
+                             readahead=False, meminit=False)
+
+        with self.env.begin(write=False) as txn:
+            self.length = self.loads_pyarrow(txn.get(b'__len__'))
+            self.keys = self.loads_pyarrow(txn.get(b'__keys__'))
+
+    def loads_pyarrow(self, buf):
+        return pa.deserialize(buf)
+
+    def __getitem__(self, idx):
+        rgb, depth, eof, tau, aux, target = None, None, None, None, None, None
+        env = self.env
+        with env.begin(write=False) as txn:
+            byteflow = txn.get(self.keys[idx])
+
+        # RGB, Depth, EOF, Tau, Aux, Target
+        unpacked = self.loads_pyarrow(byteflow)
+
+        # load data
+        rgb = torch.from_numpy(unpacked[0]).type(torch.FloatTensor)
+        depth = torch.from_numpy(unpacked[1]).type(torch.FloatTensor)
+        eof = torch.from_numpy(unpacked[2]).type(torch.FloatTensor)
+        tau = torch.from_numpy(unpacked[3]).type(torch.FloatTensor)
+        aux = torch.from_numpy(unpacked[4]).type(torch.FloatTensor)
+        target = torch.from_numpy(unpacked[5]).type(torch.FloatTensor)
+
+        return [rgb, depth, eof, tau, aux, target]
+
+    def __len__(self):
+        return self.length
+
 class SpatialSoftmax(nn.Module):
     """
     Spatial Softmax Implementation
@@ -308,9 +350,6 @@ class BehaviorCloneLoss(nn.Module):
                         torch.norm(out.view(bs,n,1),p=2,dim=1,keepdim=True))
         a_cos = torch.squeeze(torch.acos(torch.clamp(torch.div(num, den), 0, 1-self.eps)))
         c_loss = torch.mean(a_cos)
-        #print("THIS IS DEN {}".format(den))
-        #print("THIS IS ACOS {}".format(torch.acos(torch.div(num, den))))
-        #print("THIS IS C_LOSS {}".format(c_loss))
         # For the aux loss
         aux_loss = self.aux(aux_out, aux_target)
 
@@ -335,7 +374,7 @@ class ImitationDataset(Dataset):
         target = torch.from_numpy(target).type(torch.FloatTensor)
         return [rgb, depth, eof, tau, target, aux]
 
-def train(data_file, save_path, num_epochs=1000, bs=128, lr=0.002, device='cuda:0', weight=None, is_aux=True, nfilm=1):
+def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
     model = Model2(is_aux=is_aux, nfilm=nfilm).cuda(device)
@@ -345,7 +384,7 @@ def train(data_file, save_path, num_epochs=1000, bs=128, lr=0.002, device='cuda:
     optimizer = optim.Adam(model.parameters(), lr=lr)
     model, optimizer = amp.initialize(model, optimizer, opt_level='O0')
     #model = nn.DataParallel(model)
-    datasets = {mode: ImitationDataset(data_file, mode) for mode in modes}
+    datasets = {mode: ImitationLMDB(data_file, mode) for mode in modes}
     dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
     data_sizes = {mode: len(datasets[mode]) for mode in modes}
     lowest_test_cost = float('inf')
@@ -397,8 +436,6 @@ def train(data_file, save_path, num_epochs=1000, bs=128, lr=0.002, device='cuda:
     cost_file.close()
 
 if __name__ == '__main__':
-    m = Model()
-    m(torch.ones(64,3,120,160), torch.ones(64,1,120,160), torch.ones(64,15), torch.ones(64,3))
     parser = argparse.ArgumentParser(description='Input to data cleaner')
     parser.add_argument('-d', '--data_file', required=True, help='Path to data.hdf5')
     parser.add_argument('-s', '--save_path', required=True, help='Path to save the model weights/checkpoints and results')
