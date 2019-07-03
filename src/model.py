@@ -323,6 +323,7 @@ class Model2(nn.Module):
         x = torch.add(torch.mul(alpha, x), beta)
         x = self.output(x)
         return x, aux
+
 class BehaviorCloneLoss(nn.Module):
     """
     The Loss function described in the paper
