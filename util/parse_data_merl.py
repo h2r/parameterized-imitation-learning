@@ -26,6 +26,7 @@ def create_cases_csv(csv_path, dest_path, cases, mode, episode_len=40, num_pos=8
                 input_file = osp.join(csv_path, "data_training"+str(i))
             elif mode == "test":
                 input_file = osp.join(csv_path, "data_test"+str(i))
+            print(input_file)
             with open(input_file, 'r') as info:
                 arr = [line.strip().split(',') for line in info]
                 for line_idx in range(0, len(arr), episode_len):
@@ -91,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('-pth', '--csv_path', required=True, help='path to the directory where the csv files are i.e. ./data')
     parser.add_argument('-d', '--dest_path', required=True, help='Destination directory for train.lmdb or test.lmdb i.e. ./data')
     parser.add_argument('-m', '--mode', required=True, help='train or test i.e. -m train')
-    parser.add_argument('-el', '--episode_len', required=False, default=28, type=int, help='Length of each episode. Default set to 28')
+    parser.add_argument('-el', '--episode_len', required=False, default=40, type=int, help='Length of each episode. Default set to 28')
     parser.add_argument('-c', '--cases', required=True, nargs='+', help='the number of holes that you would want to include in the training i.e. -c 0_hole 1_hole 8_hole')
     args = parser.parse_args()
 
@@ -102,6 +103,6 @@ if __name__ == '__main__':
                      args.mode,
                      episode_len=args.episode_len,
                      num_pos=8)
-    #parse_raw_data_merl(args.dest_path,
-    #                    args.mode,
-    #                    episode_len=args.episode_len)
+    parse_raw_data_merl(args.dest_path,
+                        args.mode,
+                        episode_len=args.episode_len)
