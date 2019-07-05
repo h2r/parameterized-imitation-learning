@@ -1,4 +1,4 @@
-from src.model import Model2
+from src.model import Model2, Model3
 from src.loss_func import BehaviorCloneLoss
 from src.datasets import ImitationLMDB
 
@@ -9,10 +9,13 @@ from torch.utils.data import DataLoader
 import tqdm
 import argparse
 
-def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1):
+def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
-    model = Model2(is_aux=is_aux, nfilm=nfilm).to(device)
+    if relu_first:
+        model = Model2(is_aux=is_aux, nfilm=nfilm).to(device)
+    else:
+        model = Model3(is_aux=is_aux, nfilm=nfilm).to(device)
     if weight is not None:
         model.load_state_dict(torch.load(weight, map_location=device))
     criterion = BehaviorCloneLoss().to(device)
@@ -82,6 +85,7 @@ if __name__ == '__main__':
     parser.add_argument('-device', '--device', required=False, default="cuda:0", type=str, help='The cuda device')
     parser.add_argument('-aux', '--aux', required=False, default=True, type=bool, help='Whether or not to connect the auxiliary task')
     parser.add_argument('-nf', '--nfilm', required=False, default=1, type=int, help='Number of film layers')
+    parser.add_argument('-rf', '--relu_first', required=False, default=True, type=bool, help='Film after relu')
     args = parser.parse_args()
 
     device = None
