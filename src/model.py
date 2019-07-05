@@ -150,19 +150,6 @@ class Model2(nn.Module):
                                           nn.Linear(2,2),
                                           nn.ReLU(),
                                           nn.Linear(2,2))
-        if nfilm == 2 or nfilm == 3:            
-            self.spatial_film2 = nn.Sequential(nn.Linear(3,2),
-                                              nn.ReLU(),
-                                              nn.Linear(2,2),
-                                              nn.ReLU(),
-                                              nn.Linear(2,2))
-
-        if nfilm == 3:            
-            self.spatial_film3 = nn.Sequential(nn.Linear(3,2),
-                                              nn.ReLU(),
-                                              nn.Linear(2,2),
-                                              nn.ReLU(),
-                                              nn.Linear(2,2))
 
         self.conv1 = nn.Sequential(nn.Conv2d(80, 32, kernel_size=1),
                                    nn.ReLU())
@@ -205,10 +192,6 @@ class Model2(nn.Module):
         nn.init.uniform_(self.conv3[0].weight,a=-0.01,b=0.01)
         for i in range(0,5,2):
             nn.init.uniform_(self.spatial_film[i].weight,a=-0.01,b=0.01)
-            if nfilm == 2 or nfilm == 3:
-                nn.init.uniform_(self.spatial_film2[i].weight,a=-0.01,b=0.01)
-            if nfilm == 3:
-                nn.init.uniform_(self.spatial_film3[i].weight,a=-0.01,b=0.01)
             nn.init.uniform_(self.film[i].weight,a=-0.01,b=0.01)
             if i < 3:
                 nn.init.uniform_(self.aux[i].weight,a=-0.01,b=0.01)
@@ -224,35 +207,30 @@ class Model2(nn.Module):
         x_depth = self.layer1_depth(depth)
         x = F.relu(torch.cat([x_rgb, x_depth], dim=1))
 
-        # Spatial Film 1
-        spatial_params1 = self.spatial_film(tau)
-        spatial_alpha1 = spatial_params1[:,0].unsqueeze(1)
-        spatial_beta1 = spatial_params1[:,1].unsqueeze(1)
+        # Spatial Film
+        spatial_params = self.spatial_film(tau)
+        spatial_alpha = spatial_params[:,0].unsqueeze(1)
+        spatial_beta = spatial_params[:,1].unsqueeze(1)
         
         # First FILM
-        x = self.conv1(x) 
-        original_shape = x.shape
-        x = torch.add(torch.mul(spatial_alpha1, x.view(original_shape[0], -1)), spatial_beta1).view(original_shape)
+        x = self.conv1(x)
+        if self.nfilm == 1:
+            original_shape = x.shape
+            x = torch.add(torch.mul(spatial_alpha, x.view(original_shape[0], -1)), spatial_beta).view(original_shape)
         
         # Second FILM
         x = self.conv2(x)
-        if self.nfilm == 2 or self.nfilm == 3:
+        if self.nfilm == 2:
             # Spatial Film 2
-            spatial_params2 = self.spatial_film2(tau)
-            spatial_alpha2 = spatial_params2[:,0].unsqueeze(1)
-            spatial_beta2 = spatial_params2[:,1].unsqueeze(1)
             original_shape = x.shape
-            x = torch.add(torch.mul(spatial_alpha2, x.view(original_shape[0], -1)), spatial_beta2).view(original_shape)
+            x = torch.add(torch.mul(spatial_alpha, x.view(original_shape[0], -1)), spatial_beta).view(original_shape)
         
         # Third FILM
         x = self.conv3(x)
         if self.nfilm == 3:
             # Spatial Film 3
-            spatial_params3 = self.spatial_film3(tau)
-            spatial_alpha3 = spatial_params3[:,0].unsqueeze(1)
-            spatial_beta3 = spatial_params3[:,1].unsqueeze(1)
             original_shape = x.shape
-            x = torch.add(torch.mul(spatial_alpha3, x.view(original_shape[0], -1)), spatial_beta3).view(original_shape)
+            x = torch.add(torch.mul(spatial_alpha, x.view(original_shape[0], -1)), spatial_beta).view(original_shape)
 
         x = self.spatial_softmax(x)
         aux = self.aux(x)
