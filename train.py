@@ -52,7 +52,6 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                         loss = criterion(out, aux_out, targets[0], targets[1])
                         running_loss += (loss.item()*curr_bs)
             cost = running_loss/data_sizes[mode]
-            print(str(epoch)+","+mode+","+str(cost)+"\n")
             cost_file.write(str(epoch)+","+mode+","+str(cost)+"\n")
             if mode == 'test':
                 if lowest_test_cost >= cost:
