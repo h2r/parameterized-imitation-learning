@@ -13,7 +13,7 @@ def serialize_pyarrow(obj):
 def norm_img(img):
     return 2*((img - np.amin(img))/(np.amax(img)-np.amin(img)))-1
 
-def create_cases_csv(csv_path, dest_path, cases, mode, episode_len=40, num_pos=8)
+def create_cases_csv(csv_path, dest_path, cases, mode, episode_len=40, num_pos=8):
     """
     Note that cases is a list of buttons. will be handled and detailed by argparse
     """
@@ -102,6 +102,6 @@ if __name__ == '__main__':
                      args.mode,
                      episode_len=args.episode_len,
                      num_pos=8)
-    parse_raw_data_merl(args.dest_path,
-                        args.mode,
-                        episode_len=args.episode_len)
+    #parse_raw_data_merl(args.dest_path,
+    #                    args.mode,
+    #                    episode_len=args.episode_len)
