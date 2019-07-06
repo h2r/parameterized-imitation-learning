@@ -233,6 +233,7 @@ class Model2(nn.Module):
             x = torch.add(torch.mul(spatial_alpha, x.view(original_shape[0], -1)), spatial_beta).view(original_shape)
 
         x = self.spatial_softmax(x)
+        aux = self.aux(x)
         x = F.relu(self.fl1(x))
 
         if self.is_aux:
@@ -347,6 +348,7 @@ class Model3(nn.Module):
         x = F.relu(x)
 
         x = self.spatial_softmax(x)
+        aux = self.aux(x)
         x = F.relu(self.fl1(x))
 
         if self.is_aux:
