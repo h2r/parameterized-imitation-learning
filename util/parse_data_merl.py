@@ -20,7 +20,7 @@ def create_cases_csv(csv_path, dest_path, cases, mode, episode_len=40, num_pos=8
     file_path = osp.join(dest_path, mode+"_data.csv")
     with open(file_path, 'w+') as out:
         writer = csv.writer(out, delimiter=',')
-        for i in range(1,num_pos+1):
+        for i in range(2,num_pos+1):
             input_file = None
             if mode == "train":
                 input_file = osp.join(csv_path, "data_training"+str(i))
