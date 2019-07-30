@@ -29,7 +29,7 @@ def plot_file(train_losses, test_losses, identifier=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('loss_files',
-                        help='The path to the loss file you want to plot.',
+                        help='The path(s) to the loss file(s) you want to plot.',
                         nargs='*')
     args = parser.parse_args()
 
