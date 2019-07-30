@@ -1,5 +1,6 @@
 /datas/
 /clean_datas/
 /results/
+/losses/
 *.txt
 *.swp
