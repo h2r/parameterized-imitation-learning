@@ -47,49 +47,51 @@ class Model(nn.Module):
     """
     The net implemented from Deep Imitation Learning from Virtual Teleoperation with parameterization
     """
-    def __init__(self, is_aux=True, nfilm=1, relu_first=True):
+    def __init__(self, is_aux=True, nfilm=1, relu_first=True, use_bias=True):
         super(Model, self).__init__()
         self.is_aux = is_aux
+        self.nfilm = nfilm
+        self.relu_first = relu_first
+        self.use_bias = use_bias
+        
         # Note that all of the layers have valid padding
-        self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2)
-        self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2)
-        self.spatial_film = nn.Sequential(nn.Linear(3,2),
+        self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2, bias=use_bias)
+        self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2, bias=use_bias)
+        self.spatial_film = nn.Sequential(nn.Linear(3,2, bias=use_bias),
                                           nn.ReLU(),
-                                          nn.Linear(2,2),
+                                          nn.Linear(2,2, bias=use_bias),
                                           nn.ReLU(),
-                                          nn.Linear(2,2))
+                                          nn.Linear(2,2, bias=use_bias))
 
-        self.conv1 = nn.Conv2d(80, 32, kernel_size=1)
-        self.conv2 = nn.Conv2d(32, 32, kernel_size=3)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=3)                   
+        self.conv1 = nn.Conv2d(80, 32, kernel_size=1, bias=use_bias)
+        self.conv2 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
+        self.conv3 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)                   
         self.spatial_softmax = SpatialSoftmax(53, 73, 32)
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
-        self.aux = nn.Sequential(nn.Linear(64, 40),
+        self.aux = nn.Sequential(nn.Linear(64, 40, bias=use_bias),
                                  nn.ReLU(),
-                                 nn.Linear(40, 6))
+                                 nn.Linear(40, 6, bias=use_bias))
         # This is where the concatenation of the output from spatialsoftmax
-        self.fl1 = nn.Linear(64, 50)
+        self.fl1 = nn.Linear(64, 50, bias=use_bias)
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71
         if self.is_aux:
-        	self.fl2 = nn.Linear(71, 50)
+        	self.fl2 = nn.Linear(71, 50, bias=use_bias)
         else:
-        	self.fl2 = nn.Linear(65, 50)
+        	self.fl2 = nn.Linear(65, 50, bias=use_bias)
         # FiLM Conditioning: Input x,y pixel location to learn alpha and beta
-        self.film = nn.Sequential(nn.Linear(3,2),
+        self.film = nn.Sequential(nn.Linear(3,2, bias=use_bias),
                                   nn.ReLU(),
-                                  nn.Linear(2,2),
+                                  nn.Linear(2,2, bias=use_bias),
                                   nn.ReLU(),
-                                  nn.Linear(2,2))
+                                  nn.Linear(2,2, bias=use_bias))
         # We use 7 to incorporate the loss function (linear vel, angular vel, dummy)
-        self.output = nn.Linear(50, 7)
+        self.output = nn.Linear(50, 7, bias=use_bias)
 
         # Initialize the weights
-        resnet = torchvision.models.resnet101(pretrained=True)
-        resnet = list(resnet.children())[0]
-        self.layer1_rgb.weight.data = resnet.weight.data
+        nn.init.uniform_(self.layer1_rgb.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.layer1_depth.weight,a=-0.01,b=0.01)
         # Convolutional Weight Updates
         nn.init.uniform_(self.conv1[0].weight,a=-0.01,b=0.01)
@@ -105,9 +107,6 @@ class Model(nn.Module):
         nn.init.uniform_(self.fl1.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.fl2.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.output.weight,a=-0.01,b=0.01)
-        
-        self.nfilm = nfilm
-        self.relu_first = relu_first
 
     def forward(self, rgb, depth, eof, tau):
         x_rgb = self.layer1_rgb(rgb)
