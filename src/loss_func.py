@@ -15,12 +15,16 @@ class BehaviorCloneLoss(nn.Module):
         self.l1 = nn.L1Loss()
         self.aux = nn.MSELoss()
 
-        self.eps = 1e-7
+        self.eps = 1e-6
 
     def forward(self, out, aux_out, target, aux_target):
         # For backwards compatibility with (6-dof + dummy) models and targets
         out    = out[:,:6]
         target = target[:,:6]
+        
+        if torch.any(torch.mean(torch.cat([out, target], dim=0) == 0, dim=1) == 1):
+            print(out)
+            print(target)
     
         l2_loss = self.l2(out, target)
         l1_loss = self.l1(out, target)
@@ -28,7 +32,7 @@ class BehaviorCloneLoss(nn.Module):
         # For the arccos loss
         bs, n = out.shape
         num = torch.bmm(target.view(bs,1,n), out.view(bs,n,1)).squeeze()
-        den = torch.norm(target,p=2,dim=1) * torch.norm(out,p=2,dim=1)
+        den = torch.norm(target,p=2,dim=1) * torch.norm(out,p=2,dim=1) + self.eps
         a_cos = torch.acos(num / den)
         c_loss = torch.mean(a_cos)
         # For the aux loss
