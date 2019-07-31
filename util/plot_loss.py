@@ -6,24 +6,32 @@ import argparse
 
 def load_file(filename):
     data = pd.read_csv(filename, sep=',', header=None)
-    data.columns = ["epoch", "train/test", "loss"]
+    data.columns = ["epoch", "loss_category", "loss"]
 
-    train_inds = data['train/test'].values == 'train'
+    categories = data['loss_category'].unique()
+    
+    losses = [(category, filter_loss(data, category)) for category in categories]
 
+    return losses, filename[:-4]
+    
+    
+def filter_loss(data, category):
+    cat_inds = data['loss_category'].values == category
+    
     losses = np.stack([data['epoch'], data['loss']])
-    train_losses = losses[(slice(None),) + np.where(train_inds)]
-    test_losses = losses[(slice(None),) + np.where(1 - train_inds)]
+    cat_losses = losses[(slice(None),) + np.where(cat_inds)]
+    
+    return cat_losses
 
-    return train_losses, test_losses, filename[:-4]
 
-
-def plot_file(train_losses, test_losses, identifier=None):
+def plot_file(losses, identifier=None):
     if identifier is None:
         label = 'Loss'
     else:
         label = 'Loss(%s)' % identifier
-    plt.plot(train_losses[0], train_losses[1], label='%s %s'%('Train', label))
-    plt.plot(test_losses[0], test_losses[1], label='%s %s'%('Test', label))
+        
+    for cat, loss in losses:
+        plt.plot(loss[0], loss[1], label='%s %s'%(cat, label))
 
 
 if __name__ == '__main__':
