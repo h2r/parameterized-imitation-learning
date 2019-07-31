@@ -178,8 +178,8 @@ class Model2(nn.Module):
                                   nn.Linear(2,2),
                                   nn.ReLU(),
                                   nn.Linear(2,2))
-        # We use 7 to incorporate the loss function (linear vel, angular vel, dummy)
-        self.output = nn.Linear(50, 7)
+        # We use 6 to incorporate the loss function (linear vel, angular vel)
+        self.output = nn.Linear(50, 6)
 
         # Initialize the weights
         resnet = torchvision.models.resnet101(pretrained=True)

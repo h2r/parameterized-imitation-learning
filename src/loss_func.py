@@ -18,8 +18,9 @@ class BehaviorCloneLoss(nn.Module):
         self.eps = 1e-7
 
     def forward(self, out, aux_out, target, aux_target):
-        out    = out[:,:-1]
-        target = target[:,:-1]
+        # For backwards compatibility with (6-dof + dummy) models and targets
+        out    = out[:,:6]
+        target = target[:,:6]
     
         l2_loss = self.l2(out, target)
         l1_loss = self.l1(out, target)
