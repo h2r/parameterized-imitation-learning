@@ -9,13 +9,13 @@ from torch.utils.data import DataLoader
 import tqdm
 import argparse
 
-def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True):
+def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, use_dummy=False):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
     model = Model(is_aux=is_aux, nfilm=nfilm, relu_first=relu_first, use_bias=use_bias).to(device)
     if weight is not None:
         model.load_state_dict(torch.load(weight, map_location=device))
-    criterion = BehaviorCloneLoss().to(device)
+    criterion = BehaviorCloneLoss(lamb_l2, lamb_l1, lamb_c, lamb_aux, use_dummy=use_dummy).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     #model = nn.DataParallel(model)
     lowest_test_cost = float('inf')
@@ -108,6 +108,11 @@ if __name__ == '__main__':
     parser.add_argument('-nf', '--nfilm', required=False, default=1, type=int, help='Number of film layers')
     parser.add_argument('-rf', '--relu_first', required=False, default=True, type=bool, help='Film after relu')
     parser.add_argument('-ub', '--use_bias', required=False, default=True, type=bool, help='Include biases in layers')
+    parser.add_argument('-l1', '--lambda_l1', required=False, default=1, type=float, help='l1 loss weight')
+    parser.add_argument('-l2', '--lambda_l2', required=False, default=.01, type=float, help='l2 loss weight')
+    parser.add_argument('-lc', '--lambda_c', required=False, default=.005, type=float, help='c loss weight')
+    parser.add_argument('-la', '--lambda_aux', required=False, default=.0001, type=float, help='aux loss weight')
+    parser.add_argument('-du', '--dummy', required=False, default=False, type=bool, help='Wether to use the loss dummy')
     args = parser.parse_args()
 
     device = None
@@ -124,4 +129,9 @@ if __name__ == '__main__':
           device=device,
           is_aux=args.aux,
           nfilm=args.nfilm,
-          use_bias=args.use_bias)
+          use_bias=args.use_bias,
+          lamb_l1=args.lambda_l1,
+          lamb_l2=args.lambda_l2,
+          lamb_c=args.lambda_c,
+          lamb_aux=args.lambda_aux,
+          use_dummy=args.dummy)
