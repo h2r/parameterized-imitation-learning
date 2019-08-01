@@ -1,4 +1,4 @@
-from src.model import Model2, Model3
+from src.model import Model
 from src.loss_func import BehaviorCloneLoss
 from src.datasets import ImitationLMDB
 
