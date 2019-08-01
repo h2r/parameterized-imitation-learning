@@ -94,9 +94,9 @@ class Model(nn.Module):
         nn.init.uniform_(self.layer1_rgb.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.layer1_depth.weight,a=-0.01,b=0.01)
         # Convolutional Weight Updates
-        nn.init.uniform_(self.conv1[0].weight,a=-0.01,b=0.01)
-        nn.init.uniform_(self.conv2[0].weight,a=-0.01,b=0.01)
-        nn.init.uniform_(self.conv3[0].weight,a=-0.01,b=0.01)
+        nn.init.uniform_(self.conv1.weight,a=-0.01,b=0.01)
+        nn.init.uniform_(self.conv2.weight,a=-0.01,b=0.01)
+        nn.init.uniform_(self.conv3.weight,a=-0.01,b=0.01)
         for i in range(0,5,2):
             nn.init.uniform_(self.spatial_film[i].weight,a=-0.01,b=0.01)
             nn.init.uniform_(self.film[i].weight,a=-0.01,b=0.01)
