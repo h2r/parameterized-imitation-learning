@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 
 import tqdm
 import argparse
+import os
 
 def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True):
     modes = ['train', 'test']
@@ -52,9 +53,9 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                     loss.backward()
 
                     # checking gradient magnitudes
-                    grad_mags = torch.zeros((0,)).squeeze()
+                    grad_mags = torch.zeros((0,))
                     for param in model.parameters():
-                        grad_mags = torch.cat([grad_mags, torch.abs(param.grad).squeeze()])
+                        grad_mags = torch.cat([grad_mags, torch.abs(param.grad).view(-1)])
                     mean_mags = torch.mean(grad_mags)
                     max_mags = torch.max(grad_mags)
 
@@ -115,6 +116,8 @@ if __name__ == '__main__':
         device = torch.device(args.device)
     else:
         device = torch.device('cpu')
+
+    os.mkdir(args.save_path)
 
     train(args.data_file,
           args.save_path,
