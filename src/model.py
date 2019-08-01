@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
 
 class SpatialSoftmax(nn.Module):
     """
@@ -31,15 +30,15 @@ class SpatialSoftmax(nn.Module):
         feature_keypoints = expected_xy.view(-1, self.channel*2)
 
         return feature_keypoints
-        
-        
+
+
 def apply_film(active, x, params):
     if active:
         original_shape = x.shape
         alpha = params[:,0]
         beta = params[:,1]
         x = torch.add(torch.mul(alpha, x.view(original_shape[0], -1)), beta).view(original_shape)
-        
+
     return x
 
 
@@ -53,7 +52,7 @@ class Model(nn.Module):
         self.nfilm = nfilm
         self.relu_first = relu_first
         self.use_bias = use_bias
-        
+
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2, bias=use_bias)
         self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2, bias=use_bias)
@@ -65,7 +64,7 @@ class Model(nn.Module):
 
         self.conv1 = nn.Conv2d(80, 32, kernel_size=1, bias=use_bias)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)                   
+        self.conv3 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
         self.spatial_softmax = SpatialSoftmax(53, 73, 32)
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
@@ -87,7 +86,7 @@ class Model(nn.Module):
                                   nn.Linear(2,2, bias=use_bias),
                                   nn.ReLU(),
                                   nn.Linear(2,2, bias=use_bias))
-        
+
 	# We use 6 to incorporate the loss function (linear vel, angular vel)
         self.output = nn.Linear(50, 6, bias=use_bias)
 
@@ -116,21 +115,21 @@ class Model(nn.Module):
 
         # Spatial Film
         spatial_params = self.spatial_film(tau).unsqueeze(2)
-        
+
         # First FILM
         x = self.conv1(x)
         if self.relu_first:
             x = apply_film(self.nfilm == 1, F.relu(x), spatial_params)
         else:
             x = F.relu(apply_film(self.nfilm == 1, x, spatial_params))
-            
+
         # Second FILM
         x = self.conv2(x)
         if self.relu_first:
             x = apply_film(self.nfilm == 2, F.relu(x), spatial_params)
         else:
             x = F.relu(apply_film(self.nfilm == 2, x, spatial_params))
-        
+
         # Third FILM
         x = self.conv3(x)
         if self.relu_first:
@@ -138,7 +137,7 @@ class Model(nn.Module):
         else:
             x = F.relu(apply_film(self.nfilm == 3, x, spatial_params))
 
-        
+
         x = self.spatial_softmax(x)
         aux = self.aux(x)
         x = F.relu(self.fl1(x))
@@ -154,7 +153,6 @@ class Model(nn.Module):
             x = apply_film(True, F.relu(x), params)
         else:
             x = F.relu(apply_film(True, x, params))
-            
+
         x = self.output(x)
         return x, aux
-

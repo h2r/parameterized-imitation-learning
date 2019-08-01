@@ -9,7 +9,7 @@ class BehaviorCloneLoss(nn.Module):
     """
     Behavior Clone Loss
     """
-    def __init__(self, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, eps=1e-6):
+    def __init__(self, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, eps=1e-6, use_dummy=False):
         super(BehaviorCloneLoss, self).__init__()
         self.lamb_l2 = lamb_l2
         self.lamb_l1 = lamb_l1
@@ -20,11 +20,16 @@ class BehaviorCloneLoss(nn.Module):
         self.aux = nn.MSELoss()
 
         self.eps = eps
+        self.use_dummy = use_dummy
 
     def forward(self, out, aux_out, target, aux_target):
         # For backwards compatibility with (6-dof + dummy) models and targets
         out    = out[:,:6]
         target = target[:,:6]
+
+        if self.use_dummy:
+            out = torch.cat([out, torch.ones(out.size(0),1)], dim=1)
+            target = torch.cat([target, torch.ones(target.size(0),1)], dim=1)
 
         if torch.any(torch.isnan(out)):
             print(out)

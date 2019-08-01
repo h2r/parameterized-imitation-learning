@@ -9,13 +9,10 @@ from torch.utils.data import DataLoader
 import tqdm
 import argparse
 
-def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True):
+def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
-    if relu_first:
-        model = Model2(is_aux=is_aux, nfilm=nfilm).to(device)
-    else:
-        model = Model3(is_aux=is_aux, nfilm=nfilm).to(device)
+    model = Model(is_aux=is_aux, nfilm=nfilm, relu_first=relu_first, use_bias=use_bias).to(device)
     if weight is not None:
         model.load_state_dict(torch.load(weight, map_location=device))
     criterion = BehaviorCloneLoss().to(device)
@@ -110,6 +107,7 @@ if __name__ == '__main__':
     parser.add_argument('-aux', '--aux', required=False, default=True, type=bool, help='Whether or not to connect the auxiliary task')
     parser.add_argument('-nf', '--nfilm', required=False, default=1, type=int, help='Number of film layers')
     parser.add_argument('-rf', '--relu_first', required=False, default=True, type=bool, help='Film after relu')
+    parser.add_argument('-ub', '--use_bias', required=False, default=True, type=bool, help='Include biases in layers')
     args = parser.parse_args()
 
     device = None
@@ -125,4 +123,5 @@ if __name__ == '__main__':
           lr=args.learning_rate,
           device=device,
           is_aux=args.aux,
-          nfilm=args.nfilm)
+          nfilm=args.nfilm,
+          use_bias=args.use_bias)
