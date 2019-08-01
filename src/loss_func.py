@@ -1,11 +1,15 @@
 import torch
 import torch.nn as nn
 
+class LossException(Exception):
+    def __init__(self, *args, **kwargs):
+        super(LossException, self).__init__(*args, **kwargs)
+
 class BehaviorCloneLoss(nn.Module):
     """
     Behavior Clone Loss
     """
-    def __init__(self, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001):
+    def __init__(self, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, eps=1e-6):
         super(BehaviorCloneLoss, self).__init__()
         self.lamb_l2 = lamb_l2
         self.lamb_l1 = lamb_l1
@@ -15,17 +19,17 @@ class BehaviorCloneLoss(nn.Module):
         self.l1 = nn.L1Loss()
         self.aux = nn.MSELoss()
 
-        self.eps = 1e-6
+        self.eps = eps
 
     def forward(self, out, aux_out, target, aux_target):
         # For backwards compatibility with (6-dof + dummy) models and targets
         out    = out[:,:6]
         target = target[:,:6]
-        
-        if torch.any(torch.mean(torch.cat([out, target], dim=0) == 0, dim=1) == 1):
+
+        if torch.any(torch.isnan(out)):
             print(out)
-            print(target)
-    
+            raise LossException('nan in model outputs!')
+
         l2_loss = self.l2(out, target)
         l1_loss = self.l1(out, target)
 
@@ -38,4 +42,29 @@ class BehaviorCloneLoss(nn.Module):
         # For the aux loss
         aux_loss = self.aux(aux_out, aux_target)
 
-        return self.lamb_l2*l2_loss + self.lamb_l1*l1_loss + self.lamb_c*c_loss + self.lamb_aux*aux_loss
+        weighted_loss = self.lamb_l2*l2_loss + self.lamb_l1*l1_loss + self.lamb_c*c_loss + self.lamb_aux*aux_loss
+
+        if torch.isnan(weighted_loss):
+            print(out)
+            print('===============')
+            print('===============')
+            print(target)
+
+            print(' ')
+            print(' ')
+            print(' ')
+
+            print('weighted loss: %.2f' % weighted_loss)
+            print('l2 loss: %.2f' % l2_loss)
+            print('l1 loss: %.2f' % l1_loss)
+            print('c loss: %.2f' % c_loss)
+            print('aux loss: %.2f' % aux_loss)
+
+            if torch.isnan(c_loss):
+                print('num: %s' % str(num))
+                print('den: %s' % str(den))
+                print('acos: %s' % str(acos))
+
+            raise LossException('Loss is nan!')
+
+        return weighted_loss

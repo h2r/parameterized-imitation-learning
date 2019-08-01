@@ -28,6 +28,8 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
     else:
         cost_file = open(save_path+"/costs.txt", 'w+')
 
+    gradients = torch.zeros((100, 2))
+
     for epoch in tqdm.trange(1, num_epochs+1, desc='Epochs'):
         datasets = {mode: ImitationLMDB(data_file, mode) for mode in modes}
         dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=False, num_workers=8, pin_memory=True) for mode in modes}
@@ -44,15 +46,37 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                     model.train()
                     optimizer.zero_grad()
                     out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
-                    loss = criterion(out, aux_out, targets[0], targets[1])
+                    try:
+                        loss = criterion(out, aux_out, targets[0], targets[1])
+                    except LossException as le:
+                        print('Last 100 gradient magnitudes:')
+                        print(gradients)
+                        raise le
                     loss.backward()
+
+                    # checking gradient magnitudes
+                    grad_mags = torch.zeros((0,)).squeeze()
+                    for param in model.parameters():
+                        grad_mags = torch.cat([grad_mags, torch.abs(param.grad).squeeze()])
+                    mean_mags = torch.mean(grad_mags)
+                    max_mags = torch.max(grad_mags)
+
+                    gradients[1:] = gradients[:-1] # shift all entries right by one
+                    gradients[0, 0] = mean_mags
+                    gradients[0, 1] = max_mags
+
                     optimizer.step()
                     running_loss += (loss.item()*curr_bs)
                 elif mode == "test":
                     model.eval()
                     with torch.no_grad():
                         out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
-                        loss = criterion(out, aux_out, targets[0], targets[1])
+                        try:
+                            loss = criterion(out, aux_out, targets[0], targets[1])
+                        except LossException as le:
+                            print('Last 100 gradient magnitudes:')
+                            print(gradients)
+                            raise le
                         running_loss += (loss.item()*curr_bs)
             cost = running_loss/data_sizes[mode]
             cost_file.write(str(epoch)+","+mode+","+str(cost)+"\n")
