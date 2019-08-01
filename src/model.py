@@ -87,8 +87,9 @@ class Model(nn.Module):
                                   nn.Linear(2,2, bias=use_bias),
                                   nn.ReLU(),
                                   nn.Linear(2,2, bias=use_bias))
-        # We use 7 to incorporate the loss function (linear vel, angular vel, dummy)
-        self.output = nn.Linear(50, 7, bias=use_bias)
+        
+	# We use 6 to incorporate the loss function (linear vel, angular vel)
+        self.output = nn.Linear(50, 6, bias=use_bias)
 
         # Initialize the weights
         nn.init.uniform_(self.layer1_rgb.weight,a=-0.01,b=0.01)

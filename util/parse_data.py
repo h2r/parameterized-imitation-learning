@@ -66,7 +66,7 @@ def create_h5(dest, mode):
             out.create_dataset("eof", (num_of_train, 15), maxshape=(None, 15))
             out.create_dataset("tau", (num_of_train, 3), maxshape=(None, 3))
             out.create_dataset("aux", (num_of_train, 6), maxshape=(None, 6))
-            out.create_dataset("target", (num_of_train, 7), maxshape=(None, 7))
+            out.create_dataset("target", (num_of_train, 6), maxshape=(None, 6))
         else:
             # Testing Data
             out.create_dataset("rgb", (num_of_test, 3, 120, 160), maxshape=(None, 3, 120, 160))
@@ -74,7 +74,7 @@ def create_h5(dest, mode):
             out.create_dataset("eof", (num_of_test, 15), maxshape=(None, 15))
             out.create_dataset("tau", (num_of_test, 3), maxshape=(None, 3))
             out.create_dataset("aux", (num_of_test, 6), maxshape=(None, 6))
-            out.create_dataset("target", (num_of_test, 7), maxshape=(None, 7))
+            out.create_dataset("target", (num_of_test, 6), maxshape=(None, 6))
 
     with open(dest+"/"+mode+"_data.csv", "r") as info, h5py.File(filename, "a") as out:
         for i, row in enumerate(csv.reader(info)):
@@ -90,8 +90,6 @@ def create_h5(dest, mode):
             tau = np.array([float(x) for x in row[17:20]])
             aux = np.array([float(x) for x in row[20:26]])
             target = [float(x) for x in row[26:32]]
-            # Add the dummy value
-            target.append(1.0)
             target = np.array(target)
             
             out['rgb'][i,:,:,:] = rgb
