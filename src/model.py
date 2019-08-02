@@ -65,8 +65,7 @@ class Model(nn.Module):
         self.conv1 = nn.Conv2d(80, 32, kernel_size=1, bias=use_bias)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
         self.conv3 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
-        #self.spatial_softmax = SpatialSoftmax(53, 73, 32)
-        self.spacial_softmax = nn.Linear(53 * 73 * 32, 64)
+        self.spatial_softmax = SpatialSoftmax(53, 73, 32)
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
@@ -139,7 +138,7 @@ class Model(nn.Module):
             x = F.relu(apply_film(self.nfilm == 3, x, spatial_params))
 
 
-        x = self.spatial_softmax(x.view(x.size(0), -1))
+        x = self.spatial_softmax(x)
         aux = self.aux(x)
         x = F.relu(self.fl1(x))
 
