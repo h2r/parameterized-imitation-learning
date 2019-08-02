@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 import tqdm
 import argparse
 import os
+import sys
 
 def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, use_dummy=False):
     modes = ['train', 'test']
@@ -123,6 +124,12 @@ if __name__ == '__main__':
         device = torch.device('cpu')
 
     os.mkdir(args.save_path)
+
+    def print2(*args, **kwargs):
+        print(*args, **kwargs)
+        sys.stdout.flush()
+
+    print = print2
 
     train(args.data_file,
           args.save_path,
