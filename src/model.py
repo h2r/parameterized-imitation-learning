@@ -150,9 +150,9 @@ class Model(nn.Module):
         # FiLM Conditioning here
         params = self.film(tau).unsqueeze(2)
         if self.relu_first:
-            x = apply_film(False, F.relu(x), params)
+            x = apply_film(True, F.relu(x), params)
         else:
-            x = F.relu(apply_film(False, x, params))
+            x = F.relu(apply_film(True, x, params))
 
         x = self.output(x)
         return x, aux
