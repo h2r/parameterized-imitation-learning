@@ -33,7 +33,7 @@ class SpatialSoftmax(nn.Module):
 
 
 def apply_film(active, x, params):
-    if active:
+    if active and False:
         original_shape = x.shape
         alpha = params[:,0]
         beta = params[:,1]
@@ -139,8 +139,15 @@ class Model(nn.Module):
 
 
         x = self.spatial_softmax(x)
+
+        ###
+        x = torch.cat([x, eof, tau], dim=1)
+        ###
+
         aux = self.aux(x)
-        x = F.relu(self.fl1(x))
+        '''
+        x = self.fl1(x)
+        x = F.relu(x)
 
         if self.is_aux:
         	x = self.fl2(torch.cat([aux, x, eof], dim=1))
@@ -153,6 +160,7 @@ class Model(nn.Module):
             x = apply_film(True, F.relu(x), params)
         else:
             x = F.relu(apply_film(True, x, params))
-
+        '''
         x = self.output(x)
+
         return x, aux
