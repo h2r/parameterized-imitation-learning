@@ -69,11 +69,11 @@ class Model(nn.Module):
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
-        self.aux = nn.Sequential(nn.Linear(64, 40, bias=use_bias),
+        self.aux = nn.Sequential(nn.Linear(67, 40, bias=use_bias),
                                  nn.ReLU(),
                                  nn.Linear(40, 6, bias=use_bias))
         # This is where the concatenation of the output from spatialsoftmax
-        self.fl1 = nn.Linear(64, 50, bias=use_bias)
+        self.fl1 = nn.Linear(67, 50, bias=use_bias)
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71
         if self.is_aux:
@@ -138,7 +138,7 @@ class Model(nn.Module):
             x = F.relu(apply_film(self.nfilm == 3, x, spatial_params))
 
 
-        x = self.spatial_softmax(x)
+        x = torch.cat([self.spatial_softmax(x), tau], dim=1)
         aux = self.aux(x)
         x = F.relu(self.fl1(x))
 
@@ -150,9 +150,9 @@ class Model(nn.Module):
         # FiLM Conditioning here
         params = self.film(tau).unsqueeze(2)
         if self.relu_first:
-            x = apply_film(True, F.relu(x), params)
+            x = apply_film(False, F.relu(x), params)
         else:
-            x = F.relu(apply_film(True, x, params))
+            x = F.relu(apply_film(False, x, params))
 
         x = self.output(x)
         return x, aux
