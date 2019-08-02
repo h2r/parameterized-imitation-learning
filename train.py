@@ -106,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('-lr', '--learning_rate', required=False, default=0.001, type=float, help='Learning Rate')
     parser.add_argument('-device', '--device', required=False, default="cuda:0", type=str, help='The cuda device')
     parser.add_argument('-aux', '--aux', required=False, default=True, type=bool, help='Whether or not to connect the auxiliary task')
-    parser.add_argument('-nf', '--nfilm', required=False, default=1, type=int, help='Number of film layers')
+    parser.add_argument('-nf', '--nfilm', required=False, default=3, type=int, help='Number of film layers')
     parser.add_argument('-rf', '--relu_first', required=False, default=True, type=bool, help='Film after relu')
     parser.add_argument('-ub', '--use_bias', required=False, default=True, type=bool, help='Include biases in layers')
     parser.add_argument('-l1', '--lambda_l1', required=False, default=1, type=float, help='l1 loss weight')
