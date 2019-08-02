@@ -28,8 +28,8 @@ class BehaviorCloneLoss(nn.Module):
         target = target[:,:6]
 
         if self.use_dummy:
-            out = torch.cat([out, torch.ones(out.size(0),1)], dim=1)
-            target = torch.cat([target, torch.ones(target.size(0),1)], dim=1)
+            out = torch.cat([out, torch.ones(out.size(0),1).to(out)], dim=1)
+            target = torch.cat([target, torch.ones(target.size(0),1).to(target)], dim=1)
 
         if torch.any(torch.isnan(out)):
             print(out)
