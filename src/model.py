@@ -87,7 +87,7 @@ class Model(nn.Module):
                                   nn.ReLU(),
                                   nn.Linear(2,2, bias=use_bias))
 
-	# We use 6 to incorporate the loss function (linear vel, angular vel)
+	    # We use 6 to incorporate the loss function (linear vel, angular vel)
         self.output = nn.Linear(50, 6, bias=use_bias)
 
         # Initialize the weights

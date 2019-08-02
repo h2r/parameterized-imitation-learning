@@ -116,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument('-la', '--lambda_aux', required=False, default=.0001, type=float, help='aux loss weight')
     parser.add_argument('-du', '--dummy', required=False, default=False, type=bool, help='Wether to use the loss dummy')
     args = parser.parse_args()
-    print(args.dummy)
+
     device = None
     if torch.cuda.is_available():
         device = torch.device(args.device)
@@ -125,8 +125,8 @@ if __name__ == '__main__':
 
     os.mkdir(args.save_path)
 
-    def print2(*args, **kwargs):
-        print(*args, **kwargs)
+    def print2(*kargs, **kwargs):
+        print(*kargs, **kwargs)
         sys.stdout.flush()
 
     print = print2
