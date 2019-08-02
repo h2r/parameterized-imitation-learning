@@ -4,3 +4,4 @@
 /losses/
 *.txt
 *.swp
+*/__pycache__/
