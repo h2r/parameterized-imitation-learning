@@ -31,7 +31,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
 
     for epoch in tqdm.trange(1, num_epochs+1, desc='Epochs'):
         datasets = {mode: ImitationLMDB(data_file, mode) for mode in modes}
-        dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=False, num_workers=8, pin_memory=True) for mode in modes}
+        dataloaders = {mode: DataLoader(datasets[mode], batch_size=bs, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
         data_sizes = {mode: len(datasets[mode]) for mode in modes}
         for mode in modes:
             running_loss = 0.0
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument('-la', '--lambda_aux', required=False, default=.0001, type=float, help='aux loss weight')
     parser.add_argument('-du', '--dummy', required=False, default=False, type=bool, help='Wether to use the loss dummy')
     args = parser.parse_args()
-
+    print(args.dummy)
     device = None
     if torch.cuda.is_available():
         device = torch.device(args.device)
