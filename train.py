@@ -55,7 +55,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                     # checking gradient magnitudes
                     grad_mags = torch.zeros((0,))
                     for param in model.parameters():
-                        grad_mags = torch.cat([grad_mags, torch.abs(param.grad).view(-1)])
+                        grad_mags = torch.cat([grad_mags.to(param.grad), torch.abs(param.grad).view(-1)])
                     mean_mags = torch.mean(grad_mags)
                     max_mags = torch.max(grad_mags)
 
