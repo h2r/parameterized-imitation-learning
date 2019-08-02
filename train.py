@@ -109,7 +109,7 @@ if __name__ == '__main__':
     parser.add_argument('-aux', '--aux', required=False, default=True, type=bool, help='Whether or not to connect the auxiliary task')
     parser.add_argument('-nf', '--nfilm', required=False, default=3, type=int, help='Number of film layers')
     parser.add_argument('-rf', '--relu_first', required=False, default=True, type=bool, help='Film after relu')
-    parser.add_argument('-ub', '--use_bias', required=False, default=True, type=bool, help='Include biases in layers')
+    parser.add_argument('-ub', '--use_bias', required=False, default=False, type=bool, help='Include biases in layers')
     parser.add_argument('-l1', '--lambda_l1', required=False, default=1, type=float, help='l1 loss weight')
     parser.add_argument('-l2', '--lambda_l2', required=False, default=.01, type=float, help='l2 loss weight')
     parser.add_argument('-lc', '--lambda_c', required=False, default=.005, type=float, help='c loss weight')
