@@ -1,5 +1,5 @@
 from src.model import Model
-from src.loss_func import BehaviorCloneLoss
+from src.loss_func import BehaviorCloneLoss, LossException
 from src.datasets import ImitationLMDB
 
 import torch
