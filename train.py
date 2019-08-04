@@ -142,11 +142,11 @@ if __name__ == '__main__':
 
     os.makedirs(args.save_path, exist_ok=True)
 
-    # def print2(*kargs, **kwargs):
-    #     print(*kargs, **kwargs)
-    #     sys.stdout.flush()
-    #
-    # print = print2
+    old_print = print
+    def print2(*kargs, **kwargs):
+        old_print(*kargs, **kwargs)
+        sys.stdout.flush()
+    print = print2
 
     train(args.data_file,
           args.save_path,
