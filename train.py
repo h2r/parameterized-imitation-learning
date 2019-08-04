@@ -47,8 +47,8 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                         optimizer.zero_grad()
                         inputs[1] = torch.zeros(inputs[1].size()).to(inputs[1])
 
-                        x = inputs[2][:,0]
-                        y = inputs[2][:,1]
+                        x = inputs[3][:,0]
+                        y = inputs[3][:,1]
 
                         x[x < 240] = 0
                         x[((240 < x) + (x < 500)) == 2] = 1
@@ -58,10 +58,8 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                         y[((240 < y) + (y < 400)) == 2] = 1
                         y[400 < y] = 2
 
-                        inputs[2][:,0] = x
-                        inputs[2][:,1] = y
-
-                        print(inputs[2][:5])
+                        inputs[3][:,] = x
+                        inputs[3][:,1] = y
 
                         out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
                         try:
