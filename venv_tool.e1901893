@@ -1,0 +1,15 @@
+ERROR: Exception:
+Traceback (most recent call last):
+  File "/data/people/shastin1/venv/lib/python3.5/site-packages/pip/_internal/cli/base_command.py", line 188, in main
+    status = self.run(options, args)
+  File "/data/people/shastin1/venv/lib/python3.5/site-packages/pip/_internal/commands/uninstall.py", line 75, in run
+    auto_confirm=options.yes, verbose=self.verbosity > 0,
+  File "/data/people/shastin1/venv/lib/python3.5/site-packages/pip/_internal/req/req_install.py", line 831, in uninstall
+    uninstalled_pathset.remove(auto_confirm, verbose)
+  File "/data/people/shastin1/venv/lib/python3.5/site-packages/pip/_internal/req/req_uninstall.py", line 382, in remove
+    if auto_confirm or self._allowed_to_proceed(verbose):
+  File "/data/people/shastin1/venv/lib/python3.5/site-packages/pip/_internal/req/req_uninstall.py", line 425, in _allowed_to_proceed
+    return ask('Proceed (y/n)? ', ('y', 'n')) == 'y'
+  File "/data/people/shastin1/venv/lib/python3.5/site-packages/pip/_internal/utils/misc.py", line 269, in ask
+    response = input(message)
+EOFError: EOF when reading a line

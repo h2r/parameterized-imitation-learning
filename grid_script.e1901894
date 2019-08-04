@@ -1,0 +1,9 @@
+Epochs:   0%|          | 0/1000 [00:00<?, ?it/s]
+train:1/1000:   0%|          | 0/470 [00:00<?, ?it/s][ATraceback (most recent call last):
+  File "train.py", line 164, in <module>
+    use_dummy=args.dummy)
+  File "train.py", line 54, in train
+    x[240 < x < 500] = 1
+RuntimeError: bool value of Tensor with more than one value is ambiguous
+
+
