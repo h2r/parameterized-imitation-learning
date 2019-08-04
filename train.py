@@ -51,11 +51,11 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                         y = inputs[2][:,1]
 
                         x[x < 240] = 0
-                        x[240 < x < 500] = 1
+                        x[((240 < x) + (x < 500)) == 2] = 1
                         x[500 < x] = 2
 
                         y[y < 240] = 0
-                        y[240 < y < 400] = 1
+                        y[((240 < y) + (y < 400)) == 2] = 1
                         y[400 < y] = 2
 
                         out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
