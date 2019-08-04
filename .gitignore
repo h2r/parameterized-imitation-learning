@@ -11,3 +11,5 @@
 *.lmdb-lock
 *.png
 *.tar
+*.e1*
+*.o1*

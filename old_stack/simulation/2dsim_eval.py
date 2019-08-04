@@ -54,7 +54,7 @@ def sim(gx, gy):
     center_x = gx
     center_y = gy
 
-    weights = "/home/nishanth/parameterized-imitation-learning/sim-results-taucat/best_checkpoint.tar"
+    weights = "best_checkpoint.tar"
 
     model = Model(is_aux=True, nfilm = 0)
     checkpoint = torch.load(weights_loc, map_location="cpu")
@@ -136,6 +136,20 @@ def sim(gx, gy):
 
             # Calculate the trajectory
             tau = get_tau(gx, gy)
+
+            x = tau[0]
+            y = tau[1]
+
+            x[x < 240] = 0
+            x[((240 < x) + (x < 500)) == 2] = 1
+            x[500 < x] = 2
+
+            y[y < 240] = 0
+            y[((240 < y) + (y < 400)) == 2] = 1
+            y[400 < y] = 2
+
+            tau = torch.cat([x, y])
+            
             out, _ = model(rgb, depth, eof, tau)
             out = out.squeeze()
             delta_x = out[0].item()

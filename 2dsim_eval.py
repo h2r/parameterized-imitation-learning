@@ -42,21 +42,21 @@ def process_images(np_array_img, is_it_rgb):
     return img
 
 
-def sim(gx, gy):
+def sim(tau):
     """
     Goal Positions: (200, 150), (400, 150), (600, 150)
                     (200, 300), (400, 300), (600, 300)
                     (200, 450), (400, 450), (600, 450)
     """
     # Note that we have the goal positions listed above. The ones that are listed are the current ones that we are using
-    goals_x = [175, 400, 625]
-    goals_y = [125, 300, 475]
-    center_x = gx
-    center_y = gy
+    #goals_x = [175, 400, 625]
+    #goals_y = [125, 300, 475]
+    #center_x = gx
+    #center_y = gy
 
-    weights_loc = "/home/nishanth/parameterized-imitation-learning/sim-results-taub4aux-bias/best_checkpoint.tar"
+    weights_loc = "best_checkpoint.tar"
 
-    model = Model(is_aux=True, nfilm = 0, use_bias = True)
+    model = Model(is_aux=True, nfilm = 0, use_bias = False)
     checkpoint = torch.load(weights_loc, map_location="cpu")
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
@@ -99,12 +99,10 @@ def sim(gx, gy):
     print("Cursor set to start position")
     pygame.mouse.set_pos(get_start())
 
-    tau = get_tau(gx, gy)
-
     while run:
         print('run')
         # Note that this is the data collection speed
-        clock.tick(30)
+        clock.tick(3)
 
         position = pygame.mouse.get_pos()
         prev_pos = curr_pos
@@ -126,11 +124,7 @@ def sim(gx, gy):
                     print("Cursor set to start position")
                     pygame.mouse.set_pos(get_start())
                 if event.key == R_KEY:
-                    goals_x = [175, 400, 625]
-                    goals_y = [125, 300, 475]
-
-                    xy = torch.randint(0, 3, (2,))
-                    tau = get_tau(goals_x[xy[0]], goals_y[xy[1]])
+                    tau = torch.randint(0, 3, (2,))
                 if event.key == ESCAPE_KEY:
                     run = False
                     break
@@ -158,7 +152,7 @@ def sim(gx, gy):
         out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
-        new_pos = [int(curr_pos[0] + delta_x), int(curr_pos[1] + delta_y)]
+        new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y]
         print(eof)
         print(tau)
         print(aux)
@@ -171,7 +165,7 @@ def sim(gx, gy):
         screen.fill((211,211,211))
         for x, y in list(itertools.product(goals_x, goals_y)):
             pygame.draw.rect(screen, (0,0,255), pygame.Rect(x-RECT_X/2, y-RECT_Y/2, RECT_X, RECT_Y))
-        pygame.draw.circle(screen, (0,0,0), curr_pos, 20, 0)
+        pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
         pygame.display.update()
 
 
@@ -183,4 +177,4 @@ if __name__ == '__main__':
 
     xy = torch.randint(0, 3, (2,))
 
-    sim(goals_x[xy[0]], goals_y[xy[1]])
+    sim(xy)
