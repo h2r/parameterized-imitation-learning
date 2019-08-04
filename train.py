@@ -46,6 +46,18 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                         model.train()
                         optimizer.zero_grad()
                         inputs[1] = torch.zeros(inputs[1].size()).to(inputs[1])
+
+                        x = inputs[2][:,0]
+                        y = inputs[2][:,1]
+
+                        x[x < 240] = 0
+                        x[240 < x < 500] = 1
+                        x[500 < x] = 2
+
+                        y[y < 240] = 0
+                        y[240 < y < 400] = 1
+                        y[400 < y] = 2
+
                         out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
                         try:
                             loss = criterion(out, aux_out, targets[0], targets[1])
@@ -112,7 +124,7 @@ if __name__ == '__main__':
     parser.add_argument('-lr', '--learning_rate', required=False, default=0.001, type=float, help='Learning Rate')
     parser.add_argument('-device', '--device', required=False, default="cuda:0", type=str, help='The cuda device')
     parser.add_argument('-aux', '--aux', required=False, default=True, type=bool, help='Whether or not to connect the auxiliary task')
-    parser.add_argument('-nf', '--nfilm', required=False, default=3, type=int, help='Number of film layers')
+    parser.add_argument('-nf', '--nfilm', required=False, default=0, type=int, help='Number of film layers')
     parser.add_argument('-rf', '--relu_first', required=False, default=True, type=bool, help='Film after relu')
     parser.add_argument('-ub', '--use_bias', required=False, default=False, type=bool, help='Include biases in layers')
     parser.add_argument('-l1', '--lambda_l1', required=False, default=1, type=float, help='l1 loss weight')
