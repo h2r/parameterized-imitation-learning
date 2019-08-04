@@ -102,7 +102,7 @@ def sim(tau):
     while run:
         print('run')
         # Note that this is the data collection speed
-        clock.tick(3)
+        clock.tick(30)
 
         position = pygame.mouse.get_pos()
         prev_pos = curr_pos
