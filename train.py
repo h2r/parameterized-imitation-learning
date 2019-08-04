@@ -61,6 +61,8 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                         inputs[2][:,0] = x
                         inputs[2][:,1] = y
 
+                        print(inputs[2][:5])
+
                         out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
                         try:
                             loss = criterion(out, aux_out, targets[0], targets[1])
