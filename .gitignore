@@ -4,4 +4,10 @@
 /losses/
 *.txt
 *.swp
-*/__pycache__/
+*/__pycache__/*
+
+*.lmdb
+*.csv
+*.lmdb-lock
+*.png
+*.tar

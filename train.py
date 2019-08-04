@@ -41,35 +41,11 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                 curr_bs = inputs[0].shape[0]
                 inputs = [x.to(device, non_blocking=False) for x in inputs]
                 targets = [x.to(device, non_blocking=False) for x in targets]
-                if mode == "train":
-                    model.train()
-                    optimizer.zero_grad()
-                    out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
-                    try:
-                        loss = criterion(out, aux_out, targets[0], targets[1])
-                    except LossException as le:
-                        print('Last 100 gradient magnitudes:')
-                        print(gradients)
-                        raise le
-                    loss.backward()
-
-                    # checking gradient magnitudes
-                    grad_mags = torch.zeros((0,))
-                    for param in model.parameters():
-                        if param.grad is not None:
-                            grad_mags = torch.cat([grad_mags.to(param.grad), torch.abs(param.grad).view(-1)])
-                    mean_mags = torch.mean(grad_mags)
-                    max_mags = torch.max(grad_mags)
-
-                    gradients[1:] = gradients[:-1] # shift all entries right by one
-                    gradients[0, 0] = mean_mags
-                    gradients[0, 1] = max_mags
-
-                    optimizer.step()
-                    running_loss += (loss.item()*curr_bs)
-                elif mode == "test":
-                    model.eval()
-                    with torch.no_grad():
+                with torch.autograd.detect_anomaly():
+                    if mode == "train":
+                        model.train()
+                        optimizer.zero_grad()
+                        inputs[1] = torch.zeros(inputs[1].size()).to(inputs[1])
                         out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
                         try:
                             loss = criterion(out, aux_out, targets[0], targets[1])
@@ -77,7 +53,35 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                             print('Last 100 gradient magnitudes:')
                             print(gradients)
                             raise le
+                        loss.backward()
+
+                        nanc = 0
+                        # checking gradient magnitudes
+                        grad_mags = torch.zeros((0,))
+                        for param in model.parameters():
+                            if param.grad is not None:
+                                grad_mags = torch.cat([grad_mags.to(param.grad), torch.abs(param.grad).view(-1)])
+                        mean_mags = torch.mean(grad_mags)
+                        max_mags = torch.max(grad_mags)
+
+                        gradients[1:] = gradients[:-1] # shift all entries right by one
+                        gradients[0, 0] = mean_mags
+                        gradients[0, 1] = max_mags
+
+
+                        optimizer.step()
                         running_loss += (loss.item()*curr_bs)
+                    elif mode == "test":
+                        model.eval()
+                        with torch.no_grad():
+                            out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
+                            try:
+                                loss = criterion(out, aux_out, targets[0], targets[1])
+                            except LossException as le:
+                                print('Last 100 gradient magnitudes:')
+                                print(gradients)
+                                raise le
+                            running_loss += (loss.item()*curr_bs)
             cost = running_loss/data_sizes[mode]
             cost_file.write(str(epoch)+","+mode+","+str(cost)+"\n")
             if mode == 'test':
@@ -124,13 +128,13 @@ if __name__ == '__main__':
     else:
         device = torch.device('cpu')
 
-    os.mkdir(args.save_path)
+    os.makedirs(args.save_path, exist_ok=True)
 
-    def print2(*kargs, **kwargs):
-        print(*kargs, **kwargs)
-        sys.stdout.flush()
-
-    print = print2
+    # def print2(*kargs, **kwargs):
+    #     print(*kargs, **kwargs)
+    #     sys.stdout.flush()
+    #
+    # print = print2
 
     train(args.data_file,
           args.save_path,

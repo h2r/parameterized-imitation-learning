@@ -79,7 +79,7 @@ def sim(gx, gy, name):
 
     pygame.init()
 
-    #Window 
+    #Window
     screen = pygame.display.set_mode((800, 600))
     pygame.display.set_caption("2D Simulation")
     pygame.mouse.set_visible(1)
@@ -124,14 +124,18 @@ def sim(gx, gy, name):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+                break
             if event.type == pygame.KEYUP:
                 # Note that since we are only recording when the mouse is moving, there is never a case when the velocity is 0
-                # This may cause problems because the net cannot learn to stop when the data suggests that it never does. 
+                # This may cause problems because the net cannot learn to stop when the data suggests that it never does.
                 # To simulate the fact that there will be a start and an end with no movement, we will save 5 instances at the beginning
                 # and at the end
                 if event.key == S_KEY: # sets the cursor postion near the relative start position
                     print("Cursor set to start position")
                     pygame.mouse.set_pos(get_start())
+                if event.key == pygame.K_ESCAPE:
+                    run = False
+                    break
             if event.type == pygame.MOUSEMOTION: # This is the simulation of the arm. Note that left click simulates the gripper status
                 if recording:
                     if save_counter % 3 == 0:
@@ -185,7 +189,7 @@ def sim(gx, gy, name):
         screen.fill((211,211,211))
         for x, y in list(itertools.product(goals_x, goals_y)):
             pygame.draw.rect(screen, (0,0,255), pygame.Rect(x-RECT_X/2, y-RECT_Y/2, RECT_X, RECT_Y))
-        pygame.draw.circle(screen, (255,0,0), pygame.mouse.get_pos(), 20, 2)
+        pygame.draw.circle(screen, (0,0,0), pygame.mouse.get_pos(), 20, 0)
         pygame.display.update()
 
     pygame.quit()

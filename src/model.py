@@ -56,7 +56,7 @@ class Model(nn.Module):
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2, bias=use_bias)
         self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2, bias=use_bias)
-        self.spatial_film = nn.Sequential(nn.Linear(3,2, bias=use_bias),
+        self.spatial_film = nn.Sequential(nn.Linear(2,2, bias=use_bias),
                                           nn.ReLU(),
                                           nn.Linear(2,2, bias=use_bias),
                                           nn.ReLU(),
@@ -69,26 +69,26 @@ class Model(nn.Module):
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
-        self.aux = nn.Sequential(nn.Linear(67, 40, bias=use_bias),
+        self.aux = nn.Sequential(nn.Linear(64, 40, bias=use_bias),
                                  nn.ReLU(),
-                                 nn.Linear(40, 6, bias=use_bias))
+                                 nn.Linear(40, 2, bias=use_bias))
         # This is where the concatenation of the output from spatialsoftmax
-        self.fl1 = nn.Linear(67, 50, bias=use_bias)
+        self.fl1 = nn.Linear(66, 50, bias=use_bias)
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71
         if self.is_aux:
-        	self.fl2 = nn.Linear(71, 50, bias=use_bias)
+        	self.fl2 = nn.Linear(67, 50, bias=use_bias)
         else:
         	self.fl2 = nn.Linear(65, 50, bias=use_bias)
         # FiLM Conditioning: Input x,y pixel location to learn alpha and beta
-        self.film = nn.Sequential(nn.Linear(3,2, bias=use_bias),
+        self.film = nn.Sequential(nn.Linear(2,2, bias=use_bias),
                                   nn.ReLU(),
                                   nn.Linear(2,2, bias=use_bias),
                                   nn.ReLU(),
                                   nn.Linear(2,2, bias=use_bias))
 
 	    # We use 6 to incorporate the loss function (linear vel, angular vel)
-        self.output = nn.Linear(50, 6, bias=use_bias)
+        self.output = nn.Linear(50, 7, bias=use_bias)
 
         # Initialize the weights
         nn.init.uniform_(self.layer1_rgb.weight,a=-0.01,b=0.01)
@@ -109,6 +109,8 @@ class Model(nn.Module):
         nn.init.uniform_(self.output.weight,a=-0.01,b=0.01)
 
     def forward(self, rgb, depth, eof, tau):
+        # print(eof.size())
+        # print(tau[0:3])
         x_rgb = self.layer1_rgb(rgb)
         x_depth = self.layer1_depth(depth)
         x = F.relu(torch.cat([x_rgb, x_depth], dim=1))
@@ -138,9 +140,9 @@ class Model(nn.Module):
             x = F.relu(apply_film(self.nfilm == 3, x, spatial_params))
 
 
-        x = torch.cat([self.spatial_softmax(x), tau], dim=1)
+        x = self.spatial_softmax(x)
         aux = self.aux(x)
-        x = F.relu(self.fl1(x))
+        x = F.relu(self.fl1(torch.cat([x, tau], dim=1)))
 
         if self.is_aux:
         	x = self.fl2(torch.cat([aux, x, eof], dim=1))
@@ -148,11 +150,11 @@ class Model(nn.Module):
         	x = self.fl2(torch.cat([x, eof], dim=1))
 
         # FiLM Conditioning here
-        params = self.film(tau).unsqueeze(2)
-        if self.relu_first:
-            x = apply_film(True, F.relu(x), params)
-        else:
-            x = F.relu(apply_film(True, x, params))
+        #params = self.film(tau).unsqueeze(2)
+        #if self.relu_first:
+        #    x = apply_film(True, F.relu(x), params)
+        #else:
+        #    x = F.relu(apply_film(True, x, params))
 
         x = self.output(x)
         return x, aux

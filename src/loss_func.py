@@ -42,7 +42,8 @@ class BehaviorCloneLoss(nn.Module):
         bs, n = out.shape
         num = torch.bmm(target.view(bs,1,n), out.view(bs,n,1)).squeeze()
         den = torch.norm(target,p=2,dim=1) * torch.norm(out,p=2,dim=1) + self.eps
-        a_cos = torch.acos(num / den)
+        div = num / den
+        a_cos = torch.acos(torch.clamp(div, -1 + self.eps, 1 - self.eps))
         c_loss = torch.mean(a_cos)
         # For the aux loss
         aux_loss = self.aux(aux_out, aux_target)
@@ -68,7 +69,8 @@ class BehaviorCloneLoss(nn.Module):
             if torch.isnan(c_loss):
                 print('num: %s' % str(num))
                 print('den: %s' % str(den))
-                print('acos: %s' % str(acos))
+                print('div: %s' % str(div))
+                print('acos: %s' % str(a_cos))
 
             raise LossException('Loss is nan!')
 
