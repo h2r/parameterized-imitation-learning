@@ -54,9 +54,9 @@ def sim(gx, gy):
     center_x = gx
     center_y = gy
 
-    weights_loc = "/home/nishanth/parameterized-imitation-learning/sim-results-taucat/best_checkpoint.tar"
+    weights_loc = "/home/nishanth/parameterized-imitation-learning/sim-results-taub4aux-bias/best_checkpoint.tar"
 
-    model = Model(is_aux=True, nfilm = 0, use_bias = False)
+    model = Model(is_aux=True, nfilm = 0, use_bias = True)
     checkpoint = torch.load(weights_loc, map_location="cpu")
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
@@ -65,7 +65,9 @@ def sim(gx, gy):
     RECT_X = 60
     RECT_Y = 60
     SPACEBAR_KEY = 32 # pygame logic
-    S_KEY = 115
+    S_KEY = pygame.K_s
+    R_KEY = pygame.K_r
+    ESCAPE_KEY = pygame.K_ESCAPE
 
     pygame.init()
 
@@ -123,7 +125,13 @@ def sim(gx, gy):
                 if event.key == S_KEY: # sets the cursor postion near the relative start position
                     print("Cursor set to start position")
                     pygame.mouse.set_pos(get_start())
-                if event.key == pygame.K_ESCAPE:
+                if event.key == R_KEY:
+                    goals_x = [175, 400, 625]
+                    goals_y = [125, 300, 475]
+
+                    xy = torch.randint(0, 3, (2,))
+                    tau = get_tau(goals_x[xy[0]], goals_y[xy[1]])
+                if event.key == ESCAPE_KEY:
                     run = False
                     break
 
