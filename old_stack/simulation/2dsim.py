@@ -53,8 +53,8 @@ def get_next_move(curr_x, curr_y, goal_x, goal_y):
 
 def sim(gx, gy, name):
     task = name
-    if not os.path.exists('datas/' + task + '/'):
-        os.mkdir('datas/' + task + '/')
+    if not os.path.exists('datas2/' + task + '/'):
+        os.mkdir('datas2/' + task + '/')
     save_folder = None
     writer = None
     text_file = None
@@ -100,7 +100,6 @@ def sim(gx, gy, name):
     save_counter = 0
     idx = 0
     last_pos = None
-    last_gripper = None
     prev_pos = None
 
     while run:
@@ -109,17 +108,14 @@ def sim(gx, gy, name):
 
         if not recording:
             recording = True
-            folder = 'datas/'+task+'/'+str(counter)+'/'
+            folder = 'datas2/'+task+'/'+str(counter)+'/'
             os.mkdir(folder)
             save_folder = folder
             text_file = open(save_folder + 'vector.txt', 'w')
             writer = csv.writer(text_file)
             print("===Start Recording===")
-            position = pygame.mouse.get_pos()
+            position = curr_pos
             prev_pos = curr_pos
-            # The mouse press is the gripper
-            buttons = pygame.mouse.get_pressed()
-            gripper = buttons[0]
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -132,34 +128,33 @@ def sim(gx, gy, name):
                 # and at the end
                 if event.key == S_KEY: # sets the cursor postion near the relative start position
                     print("Cursor set to start position")
-                    pygame.mouse.set_pos(get_start())
+                    curr_pos = get_start()
                 if event.key == pygame.K_ESCAPE:
                     run = False
                     break
-            if event.type == pygame.MOUSEMOTION: # This is the simulation of the arm. Note that left click simulates the gripper status
-                if recording:
-                    if save_counter % 3 == 0:
-                        pygame.image.save(screen, save_folder+str(idx)+"_rgb.png")
-                        depth = Image.fromarray(np.uint8(np.zeros((600,800))))
-                        depth.save(save_folder + str(idx) + "_depth.png")
-                        position = event.pos
-                        vel = np.array(position)-prev_pos
-                        gripper = event.buttons[0]
-                        writer.writerow([idx, position[0], position[1], 0, 0, 0, 0, 0, vel[0], vel[1], 0, 0, 0, 0, gripper, gx, gy])
-                        idx += 1
-                        prev_pos = np.array(position)
-                        last_pos = position
-                        last_gripper = gripper
-                        print(idx, position, vel)
-                    save_counter += 1
+        if recording:
+            if save_counter % 3 == 0:
+                pygame.image.save(screen, save_folder+str(idx)+"_rgb.png")
+                depth = Image.fromarray(np.uint8(np.zeros((600,800))))
+                depth.save(save_folder + str(idx) + "_depth.png")
+                position = curr_pos
+                vel = np.array(position)-prev_pos
+                writer.writerow([idx, position[0], position[1], 0, 0, 0, 0, 0, vel[0], vel[1], 0, 0, 0, 0, 0, gx, gy])
+                idx += 1
+                prev_pos = np.array(position)
+                last_pos = position
+                print(idx, position, vel)
+            save_counter += 1
+
         # Calculate the trajectory
         if recording:
             delta_x, delta_y = get_next_move(curr_pos[0], curr_pos[1], gx, gy)
+            delta_x = delta_x / 10
+            delta_y = delta_y / 10
             new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y]
-            pygame.mouse.set_pos(new_pos)
             curr_pos = new_pos
 
-        if curr_pos[0] == gx and curr_pos[1] == gy and recording:
+        if (np.absolute(curr_pos[0] - gx) < 1) and (np.absolute(curr_pos[1] - gy) < 1) and recording:
             recording = False
             vel = (0, 0, 0)
             for _ in range(5):
@@ -167,7 +162,7 @@ def sim(gx, gy, name):
                 depth = Image.fromarray(np.uint8(np.zeros((600,800))))
                 depth.save(save_folder + str(idx) + "_depth.png")
                 # Record data
-                writer.writerow([idx, last_pos[0], last_pos[1], 0, 0, 0, 0, 0, vel[0], vel[1], vel[2], 0, 0, 0, last_gripper, gx, gy])
+                writer.writerow([idx, last_pos[0], last_pos[1], 0, 0, 0, 0, 0, vel[0], vel[1], vel[2], 0, 0, 0, 0, gx, gy])
                 idx += 1
                 print(last_pos, vel)
             print("---Stop Recording---")
@@ -189,7 +184,7 @@ def sim(gx, gy, name):
         screen.fill((211,211,211))
         for x, y in list(itertools.product(goals_x, goals_y)):
             pygame.draw.rect(screen, (0,0,255), pygame.Rect(x-RECT_X/2, y-RECT_Y/2, RECT_X, RECT_Y))
-        pygame.draw.circle(screen, (0,0,0), pygame.mouse.get_pos(), 20, 0)
+        pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
         pygame.display.update()
 
     pygame.quit()
