@@ -68,10 +68,7 @@ class Model(nn.Module):
         self.fl1 = nn.Linear(67, 50, bias=use_bias)
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71
-        if self.is_aux:
-        	self.fl2 = nn.Linear(67, 50, bias=use_bias)
-        else:
-        	self.fl2 = nn.Linear(65, 50, bias=use_bias)
+        self.fl2 = nn.Linear(67, 50, bias=use_bias)
         # FiLM Conditioning: Input x,y pixel location to learn alpha and beta
         self.film = nn.Sequential(nn.Linear(2,2, bias=use_bias),
                                   nn.ReLU(),
@@ -90,7 +87,6 @@ class Model(nn.Module):
         nn.init.uniform_(self.conv2.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.conv3.weight,a=-0.01,b=0.01)
         for i in range(0,5,2):
-            nn.init.uniform_(self.spatial_film[i].weight,a=-0.01,b=0.01)
             nn.init.uniform_(self.film[i].weight,a=-0.01,b=0.01)
             if i < 3:
                 nn.init.uniform_(self.aux[i].weight,a=-0.01,b=0.01)
@@ -114,7 +110,7 @@ class Model(nn.Module):
         aux = self.aux(x)
 
         x = F.relu(self.fl1(x))
-    	x = self.fl2(torch.cat([aux, x, eof], dim=1))
+        x = self.fl2(torch.cat([aux, x, eof], dim=1))
         x = self.output(x)
 
         return x, aux

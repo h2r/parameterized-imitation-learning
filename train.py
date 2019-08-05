@@ -14,7 +14,7 @@ import sys
 def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, use_dummy=False):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
-    model = Model(is_aux=is_aux, nfilm=nfilm, relu_first=relu_first, use_bias=use_bias).to(device)
+    model = Model(use_bias=use_bias).to(device)
     if weight is not None:
         model.load_state_dict(torch.load(weight, map_location=device))
     criterion = BehaviorCloneLoss(lamb_l2, lamb_l1, lamb_c, lamb_aux, use_dummy=use_dummy).to(device)
