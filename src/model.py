@@ -140,7 +140,15 @@ class Model(nn.Module):
             x = F.relu(apply_film(self.nfilm == 3, x, spatial_params))
 
 
-        x = torch.cat([self.spatial_softmax(x), tau], dim=1)
+        x = self.spatial_softmax(x)
+
+        if self.nfilm < 0:
+            # FiLM Conditioning here
+            params = self.film(tau).unsqueeze(2)
+            x = apply_film(True, x, params)
+        else:
+            x = torch.cat([x, tau], dim=1)
+
         aux = self.aux(x)
         x = F.relu(self.fl1(x))
 
@@ -148,13 +156,6 @@ class Model(nn.Module):
         	x = self.fl2(torch.cat([aux, x, eof], dim=1))
         else:
         	x = self.fl2(torch.cat([x, eof], dim=1))
-
-        # FiLM Conditioning here
-        #params = self.film(tau).unsqueeze(2)
-        #if self.relu_first:
-        #    x = apply_film(True, F.relu(x), params)
-        #else:
-        #    x = F.relu(apply_film(True, x, params))
 
         x = self.output(x)
         return x, aux
