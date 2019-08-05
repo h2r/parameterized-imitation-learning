@@ -46,9 +46,13 @@ class Model(nn.Module):
     """
     The net implemented from Deep Imitation Learning from Virtual Teleoperation with parameterization
     """
-    def __init__(self, use_bias=True):
+    def __init__(self, use_bias=True, eof_size=15, tau_size=3, aux_size=6, out_size=7):
         super(Model, self).__init__()
         self.use_bias = use_bias
+        self.eof_size = eof_size
+        self.tau_size = tau_size
+        self.aux_size = aux_size
+        self.out_size = out_size
 
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2, bias=use_bias)
@@ -61,26 +65,26 @@ class Model(nn.Module):
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
-        self.aux = nn.Sequential(nn.Linear(67, 40, bias=use_bias),
+        self.aux = nn.Sequential(nn.Linear(64 + tau_size, 40, bias=use_bias),
                                  nn.ReLU(),
-                                 nn.Linear(40, 2, bias=use_bias))
+                                 nn.Linear(40, aux_size, bias=use_bias))
         # This is where the concatenation of the output from spatialsoftmax
-        self.fl1 = nn.Linear(67, 50, bias=use_bias)
+        self.fl1 = nn.Linear(64 + tau_size, 50, bias=use_bias)
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71
         if self.is_aux:
-        	self.fl2 = nn.Linear(67, 50, bias=use_bias)
+        	self.fl2 = nn.Linear(50+eof_size+aux_size, 50, bias=use_bias)
         else:
-        	self.fl2 = nn.Linear(65, 50, bias=use_bias)
+        	self.fl2 = nn.Linear(50+eof_size, 50, bias=use_bias)
         # FiLM Conditioning: Input x,y pixel location to learn alpha and beta
-        self.film = nn.Sequential(nn.Linear(2,2, bias=use_bias),
+        self.film = nn.Sequential(nn.Linear(tau_size,2, bias=use_bias),
                                   nn.ReLU(),
                                   nn.Linear(2,2, bias=use_bias),
                                   nn.ReLU(),
                                   nn.Linear(2,2, bias=use_bias))
 
 	    # We use 6 to incorporate the loss function (linear vel, angular vel)
-        self.output = nn.Linear(50, 7, bias=use_bias)
+        self.output = nn.Linear(50, out_size, bias=use_bias)
 
         # Initialize the weights
         nn.init.uniform_(self.layer1_rgb.weight,a=-0.01,b=0.01)
@@ -90,7 +94,6 @@ class Model(nn.Module):
         nn.init.uniform_(self.conv2.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.conv3.weight,a=-0.01,b=0.01)
         for i in range(0,5,2):
-            nn.init.uniform_(self.spatial_film[i].weight,a=-0.01,b=0.01)
             nn.init.uniform_(self.film[i].weight,a=-0.01,b=0.01)
             if i < 3:
                 nn.init.uniform_(self.aux[i].weight,a=-0.01,b=0.01)

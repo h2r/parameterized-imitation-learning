@@ -11,10 +11,13 @@ import argparse
 import os
 import sys
 
-def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0', weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, use_dummy=False):
+def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0',
+          weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True,
+          lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, use_dummy=False,
+          eof_size=15, tau_size=3, aux_size=6, out_size=7):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
-    model = Model(is_aux=is_aux, nfilm=nfilm, relu_first=relu_first, use_bias=use_bias).to(device)
+    model = Model(use_bias=use_bias, eof_size=eof_size, tau_size=tau_size, aux_size=aux_size, out_size=out_size).to(device)
     if weight is not None:
         model.load_state_dict(torch.load(weight, map_location=device))
     criterion = BehaviorCloneLoss(lamb_l2, lamb_l1, lamb_c, lamb_aux, use_dummy=use_dummy).to(device)
@@ -137,6 +140,10 @@ if __name__ == '__main__':
     parser.add_argument('-lc', '--lambda_c', required=False, default=.005, type=float, help='c loss weight')
     parser.add_argument('-la', '--lambda_aux', required=False, default=.0001, type=float, help='aux loss weight')
     parser.add_argument('-du', '--dummy', required=False, default=False, type=bool, help='Wether to use the loss dummy')
+    parser.add_argument('-eofs', '--eof_size', required=False, default=15, type=int, help='EOF Size')
+    parser.add_argument('-taus', '--tau_size', required=False, default=3, type=int, help='Tau Size')
+    parser.add_argument('-auxs', '--aux_size', required=False, default=2, type=int, help='Aux Size')
+    parser.add_argument('-outs', '--out_size', required=False, default=7, type=int, help='Out Size')
     args = parser.parse_args()
 
     device = None
@@ -166,4 +173,8 @@ if __name__ == '__main__':
           lamb_l2=args.lambda_l2,
           lamb_c=args.lambda_c,
           lamb_aux=args.lambda_aux,
-          use_dummy=args.dummy)
+          use_dummy=args.dummy,
+          eof_size=args.eof_size,
+          tau_size=args.tau_size,
+          aux_size=args.aux_size,
+          out_size=args.out_size)
