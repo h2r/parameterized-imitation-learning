@@ -46,23 +46,13 @@ class Model(nn.Module):
     """
     The net implemented from Deep Imitation Learning from Virtual Teleoperation with parameterization
     """
-    def __init__(self, is_aux=True, nfilm=1, relu_first=True, use_bias=True):
+    def __init__(self, use_bias=True):
         super(Model, self).__init__()
-        self.is_aux = is_aux
-        self.nfilm = nfilm
-        self.relu_first = relu_first
         self.use_bias = use_bias
-
-        tau_out = 64 if nfilm < 0 else 66
 
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2, bias=use_bias)
         self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2, bias=use_bias)
-        self.spatial_film = nn.Sequential(nn.Linear(2,2, bias=use_bias),
-                                          nn.ReLU(),
-                                          nn.Linear(2,2, bias=use_bias),
-                                          nn.ReLU(),
-                                          nn.Linear(2,2, bias=use_bias))
 
         self.conv1 = nn.Conv2d(80, 32, kernel_size=1, bias=use_bias)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
@@ -71,11 +61,11 @@ class Model(nn.Module):
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
-        self.aux = nn.Sequential(nn.Linear(tau_out, 40, bias=use_bias),
+        self.aux = nn.Sequential(nn.Linear(67, 40, bias=use_bias),
                                  nn.ReLU(),
                                  nn.Linear(40, 2, bias=use_bias))
         # This is where the concatenation of the output from spatialsoftmax
-        self.fl1 = nn.Linear(tau_out, 50, bias=use_bias)
+        self.fl1 = nn.Linear(67, 50, bias=use_bias)
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71
         if self.is_aux:
@@ -111,53 +101,20 @@ class Model(nn.Module):
         nn.init.uniform_(self.output.weight,a=-0.01,b=0.01)
 
     def forward(self, rgb, depth, eof, tau):
-        # print(eof.size())
-        # print(tau[0:3])
         x_rgb = self.layer1_rgb(rgb)
         x_depth = self.layer1_depth(depth)
         x = F.relu(torch.cat([x_rgb, x_depth], dim=1))
 
-        # Spatial Film
-        spatial_params = self.spatial_film(tau).unsqueeze(2)
-
-        # First FILM
-        x = self.conv1(x)
-        if self.relu_first:
-            x = apply_film(self.nfilm == 1, F.relu(x), spatial_params)
-        else:
-            x = F.relu(apply_film(self.nfilm == 1, x, spatial_params))
-
-        # Second FILM
-        x = self.conv2(x)
-        if self.relu_first:
-            x = apply_film(self.nfilm == 2, F.relu(x), spatial_params)
-        else:
-            x = F.relu(apply_film(self.nfilm == 2, x, spatial_params))
-
-        # Third FILM
-        x = self.conv3(x)
-        if self.relu_first:
-            x = apply_film(self.nfilm == 3, F.relu(x), spatial_params)
-        else:
-            x = F.relu(apply_film(self.nfilm == 3, x, spatial_params))
-
-
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
         x = self.spatial_softmax(x)
-
-        if self.nfilm < 0:
-            # FiLM Conditioning here
-            params = self.film(tau).unsqueeze(2)
-            x = apply_film(True, x, params)
-        else:
-            x = torch.cat([x, tau], dim=1)
+        x = torch.cat([x, tau], dim=1)
 
         aux = self.aux(x)
+
         x = F.relu(self.fl1(x))
-
-        if self.is_aux:
-        	x = self.fl2(torch.cat([aux, x, eof], dim=1))
-        else:
-        	x = self.fl2(torch.cat([x, eof], dim=1))
-
+    	x = self.fl2(torch.cat([aux, x, eof], dim=1))
         x = self.output(x)
+
         return x, aux
