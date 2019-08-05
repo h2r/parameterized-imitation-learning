@@ -45,6 +45,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                 inputs = [x.to(device, non_blocking=False) for x in inputs]
                 targets = [x.to(device, non_blocking=False) for x in targets]
 
+                '''
                 # abstractify tau
                 x = inputs[3][:,0]
                 y = inputs[3][:,1]
@@ -59,6 +60,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
 
                 inputs[3][:,0] = x
                 inputs[3][:,1] = y
+                '''
 
                 with torch.autograd.detect_anomaly():
                     if mode == "train":
