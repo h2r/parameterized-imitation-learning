@@ -54,7 +54,7 @@ def sim(tau):
     #center_x = gx
     #center_y = gy
 
-    weights_loc = "best_checkpoint.tar"
+    weights_loc = "eval_checkpoint/l1l2_swap.tar"
 
     model = Model(is_aux=True, nfilm = 0, use_bias = False)
     checkpoint = torch.load(weights_loc, map_location="cpu")
