@@ -193,7 +193,7 @@ if __name__ == '__main__':
     goals_x = [175, 400, 625]
     goals_y = [125, 300, 475]
     counter = 0
-    for x, y in list(itertools.product(goals_x, goals_y)):
+    for x, y in [[175, 475], [625, 475], [625, 125]]:
         if counter > 1:
             sim(x,y, str(x)+"_"+str(y))
         counter += 1
