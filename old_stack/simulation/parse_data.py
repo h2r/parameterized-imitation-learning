@@ -354,10 +354,10 @@ if __name__ == '__main__':
     split_percen = args.split_percen
     # if args.clean_data:
     #     print("IMAGE PREPROCESSING STARTING...")
-    #     clean_kuka_data(root_dir, cases)
+    clean_kuka_data(root_dir, cases)
     #     print("IMAGE PREPROCESSING DONE")
     # print("LMDB CREATION STARTING...")
     for mode in ['train', 'test']:
-        #parse_raw_data(root_dir, mode, cases, split_percen, dest_dir)
+        parse_raw_data(root_dir, mode, cases, split_percen, dest_dir)
         create_lmdb(dest_dir, mode, write_frequency=1000)
         print(mode+" dataset creation done")
