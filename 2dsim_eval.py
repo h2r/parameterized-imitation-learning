@@ -54,9 +54,9 @@ def sim(gx, gy):
     center_x = gx
     center_y = gy
 
-    weights_loc = "/home/nishanth/parameterized-imitation-learning/sim-results-taub4aux-bias/best_checkpoint.tar"
+    weights_loc = "/home/nishanth/parameterized-imitation-learning/sim-results-taub4aux/best_checkpoint.tar"
 
-    model = Model(is_aux=True, nfilm = 0, use_bias = True)
+    model = Model(is_aux=True, nfilm = 0, use_bias=False)
     checkpoint = torch.load(weights_loc, map_location="cpu")
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()

@@ -56,7 +56,7 @@ class Model(nn.Module):
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2, bias=use_bias)
         self.layer1_depth = nn.Conv2d(1, 16, kernel_size=7, stride=2, bias=use_bias)
-        self.spatial_film = nn.Sequential(nn.Linear(2,2, bias=use_bias),
+        self.spatial_film = nn.Sequential(nn.Linear(3,2, bias=use_bias),
                                           nn.ReLU(),
                                           nn.Linear(2,2, bias=use_bias),
                                           nn.ReLU(),
@@ -69,15 +69,15 @@ class Model(nn.Module):
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
-        self.aux = nn.Sequential(nn.Linear(66, 40, bias=use_bias),
+        self.aux = nn.Sequential(nn.Linear(67, 40, bias=use_bias),
                                  nn.ReLU(),
-                                 nn.Linear(40, 2, bias=use_bias))
+                                 nn.Linear(40, 6, bias=use_bias))
         # This is where the concatenation of the output from spatialsoftmax
-        self.fl1 = nn.Linear(66, 50, bias=use_bias)
+        self.fl1 = nn.Linear(67, 50, bias=use_bias)
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71
         if self.is_aux:
-        	self.fl2 = nn.Linear(67, 50, bias=use_bias)
+        	self.fl2 = nn.Linear(71, 50, bias=use_bias)
         else:
         	self.fl2 = nn.Linear(65, 50, bias=use_bias)
         # FiLM Conditioning: Input x,y pixel location to learn alpha and beta
