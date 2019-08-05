@@ -110,13 +110,13 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                         'loss': cost
                         }, save_path+"/best_checkpoint.tar")
                     lowest_test_cost = cost
-            if epoch % 50 == 0:
+            if epoch % 5 == 0:
                 torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': cost
-                    }, save_path+"/checkpoint.tar")
+                    }, save_path+"/checkpoint_"+epoch+".tar")
             tqdm.tqdm.write("{} loss: {}".format(mode, cost))
     cost_file.close()
 

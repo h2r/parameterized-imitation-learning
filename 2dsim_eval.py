@@ -97,15 +97,15 @@ def sim(tau):
     depth = None
 
     print("Cursor set to start position")
-    pygame.mouse.set_pos(get_start())
+    #pygame.mouse.set_pos(get_start())
 
     while run:
         print('run')
         # Note that this is the data collection speed
         clock.tick(30)
 
-        position = pygame.mouse.get_pos()
-        prev_pos = curr_pos
+        #position = pygame.mouse.get_pos()
+        #prev_pos = curr_pos
         # The mouse press is the gripper
         buttons = pygame.mouse.get_pressed()
         gripper = buttons[0]
@@ -122,7 +122,8 @@ def sim(tau):
                 # and at the end
                 if event.key == S_KEY: # sets the cursor postion near the relative start position
                     print("Cursor set to start position")
-                    pygame.mouse.set_pos(get_start())
+                    curr_pos = get_start()
+                    #pygame.mouse.set_pos(get_start())
                 if event.key == R_KEY:
                     tau = torch.randint(0, 3, (2,))
                 if event.key == ESCAPE_KEY:
@@ -159,7 +160,7 @@ def sim(tau):
         print(out)
         print(new_pos)
         print('========')
-        pygame.mouse.set_pos(new_pos)
+        #pygame.mouse.set_pos(new_pos)
         curr_pos = new_pos
 
         screen.fill((211,211,211))
