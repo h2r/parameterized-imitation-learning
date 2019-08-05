@@ -100,7 +100,7 @@ def sim(gx, gy, name, goals_x, goals_y):
 
     while run:
         # Note that this is the data collection speed
-        clock.tick(30)
+        #clock.tick(30)
 
         if not recording:
             recording = True
