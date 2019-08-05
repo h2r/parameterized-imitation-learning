@@ -116,7 +116,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': cost
-                    }, save_path+"/checkpoint_"+epoch+".tar")
+                    }, save_path+"/checkpoint_"+str(epoch)+".tar")
             tqdm.tqdm.write("{} loss: {}".format(mode, cost))
     cost_file.close()
 
