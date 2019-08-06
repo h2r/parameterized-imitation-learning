@@ -13,15 +13,8 @@ import torch
 
 # note we want tau to be col, row == x, y
 # This is like the get goal method
-def get_tau(goal_x, goal_y, rec_x=55, rec_y=55):
-    min_x = goal_x + 3 - rec_x/2
-    max_x = goal_x - 3 + rec_x/2
-    min_y = goal_y + 3 - rec_y/2
-    max_y = goal_y - 3 + rec_y/2
-    x = torch.FloatTensor(1).uniform_(min_x, max_x).int().float()
-    y = torch.FloatTensor(1).uniform_(min_y, max_y).int().float()
-    tau = torch.cat([x,y])
-    return tau
+def get_tau(goal_x, goal_y, colors):
+    return colors[goal_x, goal_y]
 
 def get_start(win_y=600, win_x=800):
     min_x = win_x - 40
@@ -49,14 +42,14 @@ def sim(tau):
                     (200, 450), (400, 450), (600, 450)
     """
     # Note that we have the goal positions listed above. The ones that are listed are the current ones that we are using
-    #goals_x = [175, 400, 625]
-    #goals_y = [125, 300, 475]
+    goals_x = [175, 400, 625]
+    goals_y = [125, 300, 475]
     #center_x = gx
     #center_y = gy
 
-    weights_loc = "eval_checkpoint/l1l2_swap.tar"
+    weights_loc = "color_out/best_checkpoint.tar"
 
-    model = Model(is_aux=True, nfilm = 0, use_bias = False)
+    model = Model(use_bias = False, aux_size=2, tau_size=3)
     checkpoint = torch.load(weights_loc, map_location="cpu")
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
@@ -92,23 +85,21 @@ def sim(tau):
     save_counter = 0
     idx = 0
     eof = None
-    last_gripper = None
     rgb = None
     depth = None
 
     print("Cursor set to start position")
     #pygame.mouse.set_pos(get_start())
 
+    colors = torch.randint(0, 255, (3,3,3))
     while run:
-        print('run')
+
         # Note that this is the data collection speed
-        clock.tick(30)
+        #clock.tick(30)
 
         #position = pygame.mouse.get_pos()
         #prev_pos = curr_pos
-        # The mouse press is the gripper
-        buttons = pygame.mouse.get_pressed()
-        gripper = buttons[0]
+        # The mouse prenp.random.ss is the gripper
 
 
         for event in pygame.event.get():
@@ -126,6 +117,8 @@ def sim(tau):
                     #pygame.mouse.set_pos(get_start())
                 if event.key == R_KEY:
                     tau = torch.randint(0, 3, (2,))
+                    colors = torch.randint(0, 255, (3,3,3))
+                    tau = get_tau(tau[0], tau[1], colors)
                 if event.key == ESCAPE_KEY:
                     run = False
                     break
@@ -149,7 +142,7 @@ def sim(tau):
             eof = torch.cat([torch.FloatTensor([position[0], position[1], 0.0]), eof[0:12]])
 
         # Calculate the trajectory
-        out, aux = model(rgb, depth, eof.view(1, -1), tau.view(1, -1))
+        out, aux = model(rgb, depth, eof.view(1, -1), tau.view(1, -1).to(eof))
         out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
@@ -164,8 +157,8 @@ def sim(tau):
         curr_pos = new_pos
 
         screen.fill((211,211,211))
-        for x, y in list(itertools.product(goals_x, goals_y)):
-            pygame.draw.rect(screen, (0,0,255), pygame.Rect(x-RECT_X/2, y-RECT_Y/2, RECT_X, RECT_Y))
+        for x, y in list(itertools.product([0, 1, 2], [0, 1, 2])):
+            pygame.draw.rect(screen, tuple(colors[x,y]), pygame.Rect(goals_x[x]-RECT_X/2, goals_y[y]-RECT_Y/2, RECT_X, RECT_Y))
         pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
         pygame.display.update()
 
@@ -173,9 +166,8 @@ def sim(tau):
     pygame.quit()
 
 if __name__ == '__main__':
-    goals_x = [175, 400, 625]
-    goals_y = [125, 300, 475]
+    tau = torch.randint(0, 3, (2,))
+    colors = torch.randint(0, 255, (3,3,3))
+    tau = get_tau(tau[0], tau[1], colors)
 
-    xy = torch.randint(0, 3, (2,))
-
-    sim(xy)
+    sim(tau)
