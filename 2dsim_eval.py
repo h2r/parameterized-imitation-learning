@@ -35,7 +35,7 @@ def process_images(np_array_img, is_it_rgb):
     return img
 
 
-def sim(tau):
+def sim():
     """
     Goal Positions: (200, 150), (400, 150), (600, 150)
                     (200, 300), (400, 300), (600, 300)
@@ -47,9 +47,9 @@ def sim(tau):
     #center_x = gx
     #center_y = gy
 
-    weights_loc = "color_out/best_checkpoint.tar"
+    weights_loc = "color_bias_out/best_checkpoint.tar"
 
-    model = Model(use_bias = False, aux_size=2, tau_size=3)
+    model = Model(use_bias = True, aux_size=2, tau_size=3)
     checkpoint = torch.load(weights_loc, map_location="cpu")
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
@@ -91,7 +91,9 @@ def sim(tau):
     print("Cursor set to start position")
     #pygame.mouse.set_pos(get_start())
 
+    tau2 = torch.randint(0, 3, (2,))
     colors = torch.randint(0, 255, (3,3,3))
+    tau = get_tau(tau2[0], tau2[1], colors)
     while run:
 
         # Note that this is the data collection speed
@@ -116,9 +118,9 @@ def sim(tau):
                     curr_pos = get_start()
                     #pygame.mouse.set_pos(get_start())
                 if event.key == R_KEY:
-                    tau = torch.randint(0, 3, (2,))
+                    tau2 = torch.randint(0, 3, (2,))
                     colors = torch.randint(0, 255, (3,3,3))
-                    tau = get_tau(tau[0], tau[1], colors)
+                    tau = get_tau(tau2[0], tau2[1], colors)
                 if event.key == ESCAPE_KEY:
                     run = False
                     break
@@ -150,6 +152,7 @@ def sim(tau):
         print(eof)
         print(tau)
         print(aux)
+        print(goals_x[tau2[0]], goals_y[tau2[1]])
         print(out)
         print(new_pos)
         print('========')
@@ -166,8 +169,4 @@ def sim(tau):
     pygame.quit()
 
 if __name__ == '__main__':
-    tau = torch.randint(0, 3, (2,))
-    colors = torch.randint(0, 255, (3,3,3))
-    tau = get_tau(tau[0], tau[1], colors)
-
-    sim(tau)
+    sim()

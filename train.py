@@ -61,6 +61,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                 inputs[3][:,0] = x
                 inputs[3][:,1] = y
                 '''
+                inputs[3] = inputs[3] * 2 / 255 - 1
 
                 with torch.autograd.detect_anomaly():
                     if mode == "train":
