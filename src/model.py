@@ -73,12 +73,6 @@ class Model(nn.Module):
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71\
         self.fl2 = nn.Linear(50+eof_size+aux_size, 50, bias=use_bias)
-        # FiLM Conditioning: Input x,y pixel location to learn alpha and beta
-        self.film = nn.Sequential(nn.Linear(tau_size,2, bias=use_bias),
-                                  nn.ReLU(),
-                                  nn.Linear(2,2, bias=use_bias),
-                                  nn.ReLU(),
-                                  nn.Linear(2,2, bias=use_bias))
 
 	    # We use 6 to incorporate the loss function (linear vel, angular vel)
         self.output = nn.Linear(50, out_size, bias=use_bias)
