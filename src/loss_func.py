@@ -23,10 +23,6 @@ class BehaviorCloneLoss(nn.Module):
         self.use_dummy = use_dummy
 
     def forward(self, out, aux_out, target, aux_target):
-        # For backwards compatibility with (6-dof + dummy) models and targets
-        out    = out[:,:6]
-        target = target[:,:6]
-
         if self.use_dummy:
             out = torch.cat([out, torch.ones(out.size(0),1).to(out)], dim=1)
             target = torch.cat([target, torch.ones(target.size(0),1).to(target)], dim=1)

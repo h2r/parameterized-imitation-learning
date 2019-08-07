@@ -8,7 +8,6 @@ import csv
 from PIL import Image
 from random import shuffle
 
-import tqdm
 import re
 import time
 import math
@@ -58,12 +57,13 @@ def parse_raw_data(mode, config):
     with open(config.dest_dir+"/"+ mode + "_data.csv", "w+") as file:
         writer = csv.writer(file, delimiter=',')
         # Go through all of the cases
-        for case in config.cases:
+        for case in config.train_cases + config.test_cases:
             # Create the splits
             if case not in splits.keys():
                 dirs = [x[0] for x in os.walk(config.root_dir + case)][1:]
                 shuffle(dirs)
-                split_idx = int(math.ceil(len(dirs)*float(config.split_percen)))
+
+                split_idx = len(dirs) if (case in config.train_cases) else 0
                 splits[case] = {"train": dirs[:split_idx], "test": dirs[split_idx:]}
             # Go into every subdirectory
             sub_dirs = splits[case]
@@ -232,7 +232,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Input to data cleaner')
     parser.add_argument('-r', '--root_dir', required=True, help='Root directory of data i.e. data/buttons')
     parser.add_argument('-d', '--dest_dir', required=True, help='Destination directory for train_data.csv and test_data.csv i.e. data/buttons/all_buttons')
-    parser.add_argument('-c', '--cases', nargs='+', required=True, help='Name of the specific cases that we want to include i.e. -c /11_button /12_button /13_button')
+    parser.add_argument('-tr', '--train_cases', nargs='+', required=True, help='Name of the specific train cases that we want to include i.e. -c /11_button /12_button /13_button')
+    parser.add_argument('-te', '--test_cases', nargs='*', required=False, help='Name of the specific test cases that we want to include i.e. -c /11_button /12_button /13_button')
     parser.add_argument('-s', '--split_percen', required=False, default=0.95, type=float, help='The Train/Test data split proportion')
     parser.add_argument('-cd', '--clean_data', default=False, dest='clean_data', action='store_true', help='Flag to turn on image preprocessing')
     parser.add_argument('-sim', '--simulation', default=False, dest='simulation', action='store_true', help='Flag to label data as simulated')
