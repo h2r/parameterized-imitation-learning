@@ -12,26 +12,16 @@ import os
 import sys
 
 def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0',
-          weight=None, is_aux=True, nfilm=1, relu_first=True, use_bias=True,
-          lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, use_dummy=False,
-          eof_size=15, tau_size=3, aux_size=6, out_size=7):
+          weight=None, use_bias=True, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005,
+          lamb_aux=0.0001,  eof_size=15, tau_size=3, aux_size=6, out_size=7):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
     kwargs = {'use_bias':use_bias, 'eof_size':eof_size, 'tau_size':tau_size, 'aux_size':aux_size, 'out_size':out_size}
     model = Model(**kwargs).to(device)
     if weight is not None:
         model.load_state_dict(torch.load(weight, map_location=device))
-    criterion = BehaviorCloneLoss(lamb_l2, lamb_l1, lamb_c, lamb_aux, use_dummy=use_dummy).to(device)
+    criterion = BehaviorCloneLoss(lamb_l2, lamb_l1, lamb_c, lamb_aux).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    torch.save({
-        'epoch': 0,
-        'model_state_dict': model.state_dict(),
-        'kwargs': kwargs,
-        'optimizer_state_dict': optimizer.state_dict(),
-        'loss': 0
-        }, save_path+"/"+str(0)+"_checkpoint.tar")
-    return
-    #model = nn.DataParallel(model)
     lowest_test_cost = float('inf')
 
     if weight is not None:
@@ -53,7 +43,7 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                 curr_bs = inputs[0].shape[0]
                 inputs = [x.to(device, non_blocking=False) for x in inputs]
                 targets = [x.to(device, non_blocking=False) for x in targets]
-                
+
                 for input in inputs:
                     if torch.any(torch.isnan(input)):
                         input.zero_()
@@ -124,25 +114,21 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Input to data cleaner')
-    parser.add_argument('-d', '--data_file', required=True, help='Path to data.hdf5')
+    parser.add_argument('-d', '--data_file', required=True, help='Path to data.lmdb')
     parser.add_argument('-s', '--save_path', required=True, help='Path to save the model weights/checkpoints and results')
-    parser.add_argument('-ne', '--num_epochs', required=False, default=1000, type=int, help='Number of epochs')
-    parser.add_argument('-bs', '--batch_size', required=False, default=64, type=int, help='Batch Size')
-    parser.add_argument('-lr', '--learning_rate', required=False, default=0.001, type=float, help='Learning Rate')
-    parser.add_argument('-device', '--device', required=False, default="cuda:0", type=str, help='The cuda device')
-    parser.add_argument('-aux', '--aux', required=False, default=True, type=bool, help='Whether or not to connect the auxiliary task')
-    parser.add_argument('-nf', '--nfilm', required=False, default=0, type=int, help='Number of film layers')
-    parser.add_argument('-rf', '--relu_first', required=False, default=True, type=bool, help='Film after relu')
-    parser.add_argument('-ub', '--use_bias', required=False, default=False, type=bool, help='Include biases in layers')
-    parser.add_argument('-l1', '--lambda_l1', required=False, default=1, type=float, help='l1 loss weight')
-    parser.add_argument('-l2', '--lambda_l2', required=False, default=.01, type=float, help='l2 loss weight')
-    parser.add_argument('-lc', '--lambda_c', required=False, default=.005, type=float, help='c loss weight')
-    parser.add_argument('-la', '--lambda_aux', required=False, default=.0001, type=float, help='aux loss weight')
-    parser.add_argument('-du', '--dummy', required=False, default=False, type=bool, help='Wether to use the loss dummy')
-    parser.add_argument('-eofs', '--eof_size', required=False, default=15, type=int, help='EOF Size')
-    parser.add_argument('-taus', '--tau_size', required=False, default=3, type=int, help='Tau Size')
-    parser.add_argument('-auxs', '--aux_size', required=False, default=2, type=int, help='Aux Size')
-    parser.add_argument('-outs', '--out_size', required=False, default=7, type=int, help='Out Size')
+    parser.add_argument('-ne', '--num_epochs', default=1000, type=int, help='Number of epochs')
+    parser.add_argument('-bs', '--batch_size', default=64, type=int, help='Batch Size')
+    parser.add_argument('-lr', '--learning_rate', default=0.001, type=float, help='Learning Rate')
+    parser.add_argument('-device', '--device', default="cuda:0", type=str, help='The cuda device')
+    parser.add_argument('-ub', '--use_bias', default=False, dest='use_bias', action='store_true', help='Flag to include biases in layers')
+    parser.add_argument('-l1', '--lambda_l1', default=1, type=float, help='l1 loss weight')
+    parser.add_argument('-l2', '--lambda_l2', default=.01, type=float, help='l2 loss weight')
+    parser.add_argument('-lc', '--lambda_c', default=.005, type=float, help='c loss weight')
+    parser.add_argument('-la', '--lambda_aux', default=.0001, type=float, help='aux loss weight')
+    parser.add_argument('-eofs', '--eof_size', default=15, type=int, help='EOF Size')
+    parser.add_argument('-taus', '--tau_size', default=3, type=int, help='Tau Size')
+    parser.add_argument('-auxs', '--aux_size', default=2, type=int, help='Aux Size')
+    parser.add_argument('-outs', '--out_size', default=7, type=int, help='Out Size')
     args = parser.parse_args()
 
     device = None
@@ -165,14 +151,11 @@ if __name__ == '__main__':
           bs=args.batch_size,
           lr=args.learning_rate,
           device=device,
-          is_aux=args.aux,
-          nfilm=args.nfilm,
           use_bias=args.use_bias,
           lamb_l1=args.lambda_l1,
           lamb_l2=args.lambda_l2,
           lamb_c=args.lambda_c,
           lamb_aux=args.lambda_aux,
-          use_dummy=args.dummy,
           eof_size=args.eof_size,
           tau_size=args.tau_size,
           aux_size=args.aux_size,

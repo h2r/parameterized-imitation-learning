@@ -9,7 +9,7 @@ class BehaviorCloneLoss(nn.Module):
     """
     Behavior Clone Loss
     """
-    def __init__(self, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, eps=1e-6, use_dummy=False):
+    def __init__(self, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, eps=1e-6):
         super(BehaviorCloneLoss, self).__init__()
         self.lamb_l2 = lamb_l2
         self.lamb_l1 = lamb_l1
@@ -20,13 +20,8 @@ class BehaviorCloneLoss(nn.Module):
         self.aux = nn.MSELoss()
 
         self.eps = eps
-        self.use_dummy = use_dummy
 
     def forward(self, out, aux_out, target, aux_target):
-        if self.use_dummy:
-            out = torch.cat([out, torch.ones(out.size(0),1).to(out)], dim=1)
-            target = torch.cat([target, torch.ones(target.size(0),1).to(target)], dim=1)
-
         if torch.any(torch.isnan(out)):
             print(out)
             raise LossException('nan in model outputs!')

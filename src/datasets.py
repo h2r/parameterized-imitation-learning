@@ -22,7 +22,7 @@ class ImitationLMDB(Dataset):
             self.keys = self.loads_pyarrow(txn.get(b'__keys__'))
 
         self.shuffled = [i for i in range(self.length)]
-        random.shuffle(self.shuffled)
+        #random.shuffle(self.shuffled)
 
     def loads_pyarrow(self, buf):
         return pa.deserialize(buf)
@@ -49,22 +49,3 @@ class ImitationLMDB(Dataset):
 
     def __len__(self):
         return self.length
-
-class ImitationH5(Dataset):
-    def __init__(self, data_file, mode):
-        super(ImitationDataset, self).__init__()
-
-        self.data = h5py.File(data_file + "/data"  + mode + '.hdf5', 'r', driver='core')
-
-    def __len__(self):
-        return self.data['rgb'].shape[0]
-
-    def __getitem__(self, idx):
-        rgb = torch.from_numpy(self.data['rgb'][idx,:,:,:]).type(torch.FloatTensor)
-        depth = torch.from_numpy(self.data['depth'][idx,:,:,:]).type(torch.FloatTensor)
-        eof = torch.from_numpy(self.data['eof'][idx,:]).type(torch.FloatTensor)
-        tau = torch.from_numpy(self.data['tau'][idx,:]).type(torch.FloatTensor)
-        aux = torch.from_numpy(self.data['aux'][idx,:]).type(torch.FloatTensor)
-        target = self.data['target'][idx,:]
-        target = torch.from_numpy(target).type(torch.FloatTensor)
-        return [rgb, depth, eof, tau, target, aux]

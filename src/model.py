@@ -84,12 +84,8 @@ class Model(nn.Module):
         nn.init.uniform_(self.conv1.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.conv2.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.conv3.weight,a=-0.01,b=0.01)
-        for i in range(0,5,2):
-            nn.init.uniform_(self.film[i].weight,a=-0.01,b=0.01)
-            if i < 3:
-                nn.init.uniform_(self.aux[i].weight,a=-0.01,b=0.01)
-            if i < 5:
-                nn.init.uniform_(self.film[i].weight,a=-0.01,b=0.01)
+        for i in range(0,3,2):
+            nn.init.uniform_(self.aux[i].weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.fl1.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.fl2.weight,a=-0.01,b=0.01)
         nn.init.uniform_(self.output.weight,a=-0.01,b=0.01)

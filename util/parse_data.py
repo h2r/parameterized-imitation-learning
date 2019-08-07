@@ -1,29 +1,15 @@
-from __future__ import print_function, division
 import numpy as np
 import os
 import os.path as osp
 import pandas as pd
 import csv
-
 from PIL import Image
 from random import shuffle
-
 import re
-import time
-import math
-import sys
-import copy
-import shutil
 from functools import cmp_to_key
-
 import argparse
-
-
-# NEW IMPORTS
 import lmdb
 import pyarrow as pa
-import six
-import msgpack
 
 splits = {}
 
@@ -64,7 +50,7 @@ def parse_raw_data(mode, config):
                 shuffle(dirs)
 
                 if len(config.test_cases) == 0:
-                    split_idx = int(math.ceil(len(dirs)*float(config.split_percen)))
+                    split_idx = int(len(dirs)*float(config.split_percen))
                 else:
                     split_idx = len(dirs) if (case in config.train_cases) else 0
                 splits[case] = {"train": dirs[:split_idx], "test": dirs[split_idx:]}
