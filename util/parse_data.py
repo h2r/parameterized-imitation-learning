@@ -64,7 +64,7 @@ def parse_raw_data(mode, config):
                 shuffle(dirs)
 
                 if len(config.test_cases) == 0:
-                    split_idx = int(math.ceil(len(dirs)*float(split_percen)))
+                    split_idx = int(math.ceil(len(dirs)*float(config.split_percen)))
                 else:
                     split_idx = len(dirs) if (case in config.train_cases) else 0
                 splits[case] = {"train": dirs[:split_idx], "test": dirs[split_idx:]}
@@ -236,7 +236,7 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--root_dir', required=True, help='Root directory of data i.e. data/buttons')
     parser.add_argument('-d', '--dest_dir', required=True, help='Destination directory for train_data.csv and test_data.csv i.e. data/buttons/all_buttons')
     parser.add_argument('-tr', '--train_cases', nargs='+', required=True, help='Name of the specific train cases that we want to include i.e. -c /11_button /12_button /13_button')
-    parser.add_argument('-te', '--test_cases', nargs='*', required=False, help='Name of the specific test cases that we want to include i.e. -c /11_button /12_button /13_button')
+    parser.add_argument('-te', '--test_cases', nargs='*', default = [], required=False, help='Name of the specific test cases that we want to include i.e. -c /11_button /12_button /13_button')
     parser.add_argument('-s', '--split_percen', required=False, default=0.95, type=float, help='The Train/Test data split proportion')
     parser.add_argument('-cd', '--clean_data', default=False, dest='clean_data', action='store_true', help='Flag to turn on image preprocessing')
     parser.add_argument('-sim', '--simulation', default=False, dest='simulation', action='store_true', help='Flag to label data as simulated')
