@@ -4,6 +4,7 @@ import sys
 import csv
 import time
 import pygame
+import argparse
 from pygame.locals import *
 from PIL import Image
 import numpy as np
@@ -13,8 +14,8 @@ import torch
 
 # note we want tau to be col, row == x, y
 # This is like the get goal method
-def get_tau(goal_x, goal_y, colors):
-    return colors[goal_x, goal_y]
+def get_tau(goal_x, goal_y, options):
+    return options[goal_x][goal_y]
 
 def get_start(win_y=600, win_x=800):
     min_x = win_x - 40
@@ -34,25 +35,12 @@ def process_images(np_array_img, is_it_rgb):
         img = img.view(1,1,img.shape[0], img.shape[1])
     return img
 
-
-def sim():
-    """
-    Goal Positions: (200, 150), (400, 150), (600, 150)
-                    (200, 300), (400, 300), (600, 300)
-                    (200, 450), (400, 450), (600, 450)
-    """
-    # Note that we have the goal positions listed above. The ones that are listed are the current ones that we are using
-    goals_x = [175, 400, 625]
-    goals_y = [125, 300, 475]
-    #center_x = gx
-    #center_y = gy
-
-    weights_loc = "color_bias_out/best_checkpoint.tar"
-
-    model = Model(use_bias = True, aux_size=2, tau_size=3)
-    checkpoint = torch.load(weights_loc, map_location="cpu")
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.eval()
+def sim(model, config):
+    goals_x = [0, 1, 2]
+    goals_y = [0, 1, 2]
+    goal_pos = [[(200, 150), (400, 150), (600, 150)],
+                [(200, 300), (400, 300), (600, 300)],
+                [(200, 450), (400, 450), (600, 450)]]
 
     # These are magic numbers
     RECT_X = 60
@@ -81,51 +69,31 @@ def sim():
     clock = pygame.time.Clock()
 
     run = True
-    recording = False
-    save_counter = 0
-    idx = 0
     eof = None
     rgb = None
     depth = None
 
-    print("Cursor set to start position")
-    #pygame.mouse.set_pos(get_start())
+    gx, gy = np.random.randint(0, 3, (2,))
+    tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
+    tau = get_tau(gx, gy, tau_opts)
 
-    tau2 = torch.randint(0, 3, (2,))
-    colors = torch.randint(0, 255, (3,3,3))
-    tau = get_tau(tau2[0], tau2[1], colors)
     while run:
-
-        # Note that this is the data collection speed
-        #clock.tick(30)
-
-        #position = pygame.mouse.get_pos()
-        #prev_pos = curr_pos
-        # The mouse prenp.random.ss is the gripper
-
-
+        clock.tick(config.framerate)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 break
             if event.type == pygame.KEYUP:
-                # Note that since we are only recording when the mouse is moving, there is never a case when the velocity is 0
-                # This may cause problems because the net cannot learn to stop when the data suggests that it never does.
-                # To simulate the fact that there will be a start and an end with no movement, we will save 5 instances at the beginning
-                # and at the end
-                if event.key == S_KEY: # sets the cursor postion near the relative start position
-                    print("Cursor set to start position")
+                if event.key == S_KEY:
                     curr_pos = get_start()
-                    #pygame.mouse.set_pos(get_start())
                 if event.key == R_KEY:
-                    tau2 = torch.randint(0, 3, (2,))
-                    colors = torch.randint(0, 255, (3,3,3))
-                    tau = get_tau(tau2[0], tau2[1], colors)
+                    gx, gy = np.random.randint(0, 3, (2,))
+                    tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
+                    tau = get_tau(gx, gy, tau_opts)
                 if event.key == ESCAPE_KEY:
                     run = False
                     break
 
-            #if event.type == pygame.MOUSEMOTION: # This is the simulation of the arm. Note that left click simulates the gripper status
         vanilla_rgb_string = pygame.image.tostring(screen,"RGBA",False)
         vanilla_rgb_pil = Image.frombytes("RGBA",(800,600),vanilla_rgb_string)
         resized_rgb = vanilla_rgb_pil.resize((160,120))
@@ -137,14 +105,13 @@ def sim():
         vanilla_depth = Image.fromarray(np.uint8(np.zeros((120,160))))
         depth = process_images(vanilla_depth, False).zero_()
 
-        position = curr_pos#pygame.mouse.get_pos()
-        if(eof is None):
-            eof = torch.FloatTensor([position[0], position[1], 0.0] * 5)
+        if eof is None:
+            eof = torch.FloatTensor([curr_pos[0], curr_pos[1], 0.0] * 5)
         else:
-            eof = torch.cat([torch.FloatTensor([position[0], position[1], 0.0]), eof[0:12]])
+            eof = torch.cat([torch.FloatTensor([curr_pos[0], curr_pos[1], 0.0]), eof[0:12]])
 
         # Calculate the trajectory
-        out, aux = model(rgb, depth, eof.view(1, -1), tau.view(1, -1).to(eof))
+        out, aux = model(rgb, depth, eof.view(1, -1), torch.FloatTensor(tau).view(1, -1).to(eof))
         out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
@@ -152,21 +119,32 @@ def sim():
         print(eof)
         print(tau)
         print(aux)
-        print(goals_x[tau2[0]], goals_y[tau2[1]])
+        print(get_tau(gx, gy, goal_pos))
         print(out)
         print(new_pos)
         print('========')
-        #pygame.mouse.set_pos(new_pos)
         curr_pos = new_pos
 
         screen.fill((211,211,211))
-        for x, y in list(itertools.product([0, 1, 2], [0, 1, 2])):
-            pygame.draw.rect(screen, tuple(colors[x,y]), pygame.Rect(goals_x[x]-RECT_X/2, goals_y[y]-RECT_Y/2, RECT_X, RECT_Y))
+        for x, y in list(itertools.product(goals_x, goals_y)):
+            color = tau_opts[x,y] if config.color else (0, 0, 255)
+            pygame.draw.rect(screen, color, pygame.Rect(goal_pos[x][y][0]-RECT_X/2, goal_pos[x][y][1]-RECT_Y/2, RECT_X, RECT_Y))
         pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
         pygame.display.update()
 
-
     pygame.quit()
+    return 0
 
 if __name__ == '__main__':
-    sim()
+    parser = argparse.ArgumentParser(description='Input to 2d simulation.')
+    parser.add_argument('-w', '--weights', required=True, help='The path to the weights to load.')
+    parser.add_argument('-c', '--color', dest='color', default=False, action='store_true', help='Used to activate color simulation.')
+    parser.add_argument('-f', '--framerate', default=300, type=int, help='Framerate of simulation.')
+    args = parser.parse_args()
+
+    checkpoint = torch.load(args.weights, map_location='cpu')
+    model = Model(**checkpoint['kwargs'])
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+
+    sim(model, args)

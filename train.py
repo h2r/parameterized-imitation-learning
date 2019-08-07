@@ -17,11 +17,20 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
           eof_size=15, tau_size=3, aux_size=6, out_size=7):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
-    model = Model(use_bias=use_bias, eof_size=eof_size, tau_size=tau_size, aux_size=aux_size, out_size=out_size).to(device)
+    kwargs = {'use_bias':use_bias, 'eof_size':eof_size, 'tau_size':tau_size, 'aux_size':aux_size, 'out_size':out_size}
+    model = Model(**kwargs).to(device)
     if weight is not None:
         model.load_state_dict(torch.load(weight, map_location=device))
     criterion = BehaviorCloneLoss(lamb_l2, lamb_l1, lamb_c, lamb_aux, use_dummy=use_dummy).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
+    torch.save({
+        'epoch': 0,
+        'model_state_dict': model.state_dict(),
+        'kwargs': kwargs,
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss': 0
+        }, save_path+"/"+str(0)+"_checkpoint.tar")
+    return
     #model = nn.DataParallel(model)
     lowest_test_cost = float('inf')
 
@@ -44,30 +53,15 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                 curr_bs = inputs[0].shape[0]
                 inputs = [x.to(device, non_blocking=False) for x in inputs]
                 targets = [x.to(device, non_blocking=False) for x in targets]
-
-                '''
-                # abstractify tau
-                x = inputs[3][:,0]
-                y = inputs[3][:,1]
-
-                x[x < 240] = 0
-                x[((240 < x) + (x < 500)) == 2] = 1
-                x[500 < x] = 2
-
-                y[y < 240] = 0
-                y[((240 < y) + (y < 400)) == 2] = 1
-                y[400 < y] = 2
-
-                inputs[3][:,0] = x
-                inputs[3][:,1] = y
-                '''
-                inputs[3] = inputs[3] * 2 / 255 - 1
+                
+                for input in inputs:
+                    if torch.any(torch.isnan(input)):
+                        input.zero_()
 
                 with torch.autograd.detect_anomaly():
                     if mode == "train":
                         model.train()
                         optimizer.zero_grad()
-                        inputs[1] = torch.zeros(inputs[1].size()).to(inputs[1])
 
                         out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
                         try:
@@ -112,17 +106,19 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                     torch.save({
                         'epoch': epoch,
                         'model_state_dict': model.state_dict(),
+                        'kwargs': kwargs,
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': cost
                         }, save_path+"/best_checkpoint.tar")
                     lowest_test_cost = cost
-            if epoch % 5 == 0:
-                torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'loss': cost
-                    }, save_path+"/checkpoint_"+str(epoch)+".tar")
+                if epoch % 5 == 0:
+                    torch.save({
+                        'epoch': epoch,
+                        'model_state_dict': model.state_dict(),
+                        'kwargs': kwargs,
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'loss': cost
+                        }, save_path+"/"+str(epoch)+"_checkpoint.tar")
             tqdm.tqdm.write("{} loss: {}".format(mode, cost))
     cost_file.close()
 
