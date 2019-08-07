@@ -47,6 +47,8 @@ def parse_raw_data(mode, config):
             # Create the splits
             if case not in splits.keys():
                 dirs = [x[0] for x in os.walk(config.root_dir + case)][1:]
+                if len(dirs) == 0:
+                    raise Exception('Case %s not found.' % case)
                 shuffle(dirs)
 
                 if len(config.test_cases) == 0:
@@ -193,9 +195,9 @@ def create_lmdb(mode, config, write_frequency=5000):
             eof = np.array([float(x) for x in row[2:17]])
             if config.simulation:
                 rl = len(row)
-                tau = np.array([float(x) for x in row[17:rl-8]])
-                aux = np.array([float(x) for x in row[rl-8:rl-6]])
-                target = np.array([float(x) for x in row[rl-6:rl]])
+                tau = np.array([float(x) for x in row[17:rl-9]])
+                aux = np.array([float(x) for x in row[rl-9:rl-7]])
+                target = np.array([float(x) for x in row[rl-7:rl]])
             else:
                 tau = np.array([float(x) for x in row[17:20]])
                 aux = np.array([float(x) for x in row[20:26]])
@@ -232,7 +234,7 @@ if __name__ == '__main__':
 
     if args.clean_data:
         print("IMAGE PREPROCESSING STARTING...")
-        clean_kuka_data(args.root_dir, args.cases)
+        clean_kuka_data(args.root_dir, args.train_cases + args.test_cases)
         print("IMAGE PREPROCESSING DONE")
     print("LMDB CREATION STARTING...")
     for mode in ['train', 'test']:

@@ -1,15 +1,21 @@
-/datas*/
-/clean_datas/
-/results/
-/losses/
-*.txt
+# Miscellaneous
 *.swp
-*/__pycache__/*
 
-*.lmdb
+# Compiled data
 *.csv
+*.lmdb
 *.lmdb-lock
+
+# Generated data
 *.png
+*.txt
+
+# Model checkpoints
 *.tar
+
+# Pycache
+*.pyc
+
+# Auto-generated grid files
 *.e1*
 *.o1*

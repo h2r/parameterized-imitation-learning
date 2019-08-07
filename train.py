@@ -11,7 +11,7 @@ import argparse
 import os
 import sys
 
-def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0',
+def train(data_file, save_path, num_epochs=1000, bs=64, scale=1, lr=0.001, device='cuda:0',
           weight=None, use_bias=True, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005,
           lamb_aux=0.0001,  eof_size=15, tau_size=3, aux_size=6, out_size=7):
     modes = ['train', 'test']
@@ -19,7 +19,11 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
     kwargs = {'use_bias':use_bias, 'eof_size':eof_size, 'tau_size':tau_size, 'aux_size':aux_size, 'out_size':out_size}
     model = Model(**kwargs).to(device)
     if weight is not None:
-        model.load_state_dict(torch.load(weight, map_location=device))
+        checkpoint = torch.load(weight, map_location=device)
+        model = Model(**checkpoint['kwargs'])
+        model.load_state_dict(checkpoint['model_state_dict'])
+        print('Using following args from loaded model:')
+        print(checkpoint['kwargs'])
     criterion = BehaviorCloneLoss(lamb_l2, lamb_l1, lamb_c, lamb_aux).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     lowest_test_cost = float('inf')
@@ -53,9 +57,9 @@ def train(data_file, save_path, num_epochs=1000, bs=64, lr=0.001, device='cuda:0
                         model.train()
                         optimizer.zero_grad()
 
-                        out, aux_out = model(inputs[0], inputs[1], inputs[2], inputs[3])
+                        out, aux_out = model(inputs[0], inputs[1], inputs[2] * scale, inputs[3] * scale)
                         try:
-                            loss = criterion(out, aux_out, targets[0], targets[1])
+                            loss = criterion(out, aux_out, targets[0] * scale, targets[1] * scale)
                         except LossException as le:
                             print('Last 100 gradient magnitudes:')
                             print(gradients)
@@ -118,6 +122,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--save_path', required=True, help='Path to save the model weights/checkpoints and results')
     parser.add_argument('-ne', '--num_epochs', default=1000, type=int, help='Number of epochs')
     parser.add_argument('-bs', '--batch_size', default=64, type=int, help='Batch Size')
+    parser.add_argument('-sc', '--scale', default=1, type=float, help='Scaling factor for non-image data')
     parser.add_argument('-lr', '--learning_rate', default=0.001, type=float, help='Learning Rate')
     parser.add_argument('-device', '--device', default="cuda:0", type=str, help='The cuda device')
     parser.add_argument('-ub', '--use_bias', default=False, dest='use_bias', action='store_true', help='Flag to include biases in layers')
@@ -149,6 +154,7 @@ if __name__ == '__main__':
           args.save_path,
           num_epochs=args.num_epochs,
           bs=args.batch_size,
+          scale=args.scale,
           lr=args.learning_rate,
           device=device,
           use_bias=args.use_bias,
