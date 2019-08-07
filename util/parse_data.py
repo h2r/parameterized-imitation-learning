@@ -63,7 +63,10 @@ def parse_raw_data(mode, config):
                 dirs = [x[0] for x in os.walk(config.root_dir + case)][1:]
                 shuffle(dirs)
 
-                split_idx = len(dirs) if (case in config.train_cases) else 0
+                if len(config.test_cases) == 0:
+                    split_idx = int(math.ceil(len(dirs)*float(split_percen)))
+                else:
+                    split_idx = len(dirs) if (case in config.train_cases) else 0
                 splits[case] = {"train": dirs[:split_idx], "test": dirs[split_idx:]}
             # Go into every subdirectory
             sub_dirs = splits[case]
