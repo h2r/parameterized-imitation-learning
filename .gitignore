@@ -1,6 +1,15 @@
-/datas/
+/datas*/
 /clean_datas/
 /results/
 /losses/
 *.txt
 *.swp
+*/__pycache__/*
+
+*.lmdb
+*.csv
+*.lmdb-lock
+*.png
+*.tar
+*.e1*
+*.o1*

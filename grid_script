@@ -1,0 +1,4 @@
+#!/bin/bash
+
+source /data/people/shastin1/venv/bin/activate
+python train.py "$@"
