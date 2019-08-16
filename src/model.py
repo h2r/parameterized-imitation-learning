@@ -32,16 +32,6 @@ class SpatialSoftmax(nn.Module):
         return feature_keypoints
 
 
-def apply_film(active, x, params):
-    if active:
-        original_shape = x.shape
-        alpha = params[:,0]
-        beta = params[:,1]
-        x = torch.add(torch.mul(alpha, x.view(original_shape[0], -1)), beta).view(original_shape)
-
-    return x
-
-
 class Model(nn.Module):
     """
     The net implemented from Deep Imitation Learning from Virtual Teleoperation with parameterization
@@ -62,6 +52,7 @@ class Model(nn.Module):
         self.conv2 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
         self.conv3 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
         self.spatial_softmax = SpatialSoftmax(53, 73, 32)
+
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
@@ -106,5 +97,6 @@ class Model(nn.Module):
         x = F.relu(self.fl1(x))
         x = self.fl2(torch.cat([aux, x, eof], dim=1))
         x = self.output(x)
+
 
         return x, aux

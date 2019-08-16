@@ -105,13 +105,19 @@ def sim(model, config):
         vanilla_depth = Image.fromarray(np.uint8(np.zeros((120,160))))
         depth = process_images(vanilla_depth, False).zero_()
 
+        div = [200, 175] if config.normalize else [1, 1]
+        sub = [400, 325] if config.normalize else [0, 0]
+        norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1]]
         if eof is None:
-            eof = torch.FloatTensor([curr_pos[0], curr_pos[1], 0.0] * 5)
+            eof = torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0] * 5)
         else:
-            eof = torch.cat([torch.FloatTensor([curr_pos[0], curr_pos[1], 0.0]), eof[0:12]])
+            eof = torch.cat([torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0]), eof[0:12]])
 
         # Calculate the trajectory
-        out, aux = model(rgb, depth, eof.view(1, -1), torch.FloatTensor(tau).view(1, -1).to(eof))
+        in_tau = torch.FloatTensor(tau)
+        if config.color:
+            in_tau = 2 * in_tau / 255 - 1
+        out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof))
         out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
@@ -139,6 +145,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Input to 2d simulation.')
     parser.add_argument('-w', '--weights', required=True, help='The path to the weights to load.')
     parser.add_argument('-c', '--color', dest='color', default=False, action='store_true', help='Used to activate color simulation.')
+    parser.add_argument('-no', '--normalize', dest='normalize', default=False, action='store_true', help='Used to activate position normalization.')
     parser.add_argument('-f', '--framerate', default=300, type=int, help='Framerate of simulation.')
     args = parser.parse_args()
 

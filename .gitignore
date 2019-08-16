@@ -9,6 +9,7 @@
 # Generated data
 *.png
 *.txt
+*.pt
 
 # Model checkpoints
 *.tar

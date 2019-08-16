@@ -11,6 +11,7 @@ import numpy as np
 import itertools
 
 
+
 # note we want tau to be col, row == x, y
 # This is like the get goal method
 def get_tau(goal_x, goal_y, options):
@@ -30,20 +31,20 @@ def get_next_move(curr_x, curr_y, goal_x, goal_y):
     if abs(curr_x - goal_x) <= 5:
         x = goal_x - curr_x
     elif abs(curr_x - goal_x) > 5 and abs(curr_x - goal_x) <= 50:
-        x = round((goal_x - curr_x)/10)
+        x = (goal_x - curr_x)/10
     else:
-        x = round((goal_x - curr_x)/80) + round(np.random.uniform(-3, 0))
+        x = (goal_x - curr_x)/80 + np.random.uniform(-3, 0)
 
     # Vertical Movement
     if abs(curr_y - goal_y) <= 5:
         y = goal_y - curr_y
     elif abs(curr_y - goal_y) > 5 and abs(curr_y - goal_y) <= 50:
-        y = round((goal_y - curr_y)/10)
+        y = (goal_y - curr_y)/10
     else:
         if curr_y > goal_y:
-            y = round((goal_y - curr_y)/100) + round(np.random.uniform(-3,1))
+            y = (goal_y - curr_y)/100 + np.random.uniform(-3,1)
         else:
-            y = round((goal_y - curr_y)/100) + round(np.random.uniform(-1,3))
+            y = (goal_y - curr_y)/100 + np.random.uniform(-1,3)
 
     return x, y
 
@@ -55,9 +56,16 @@ def sim(gx, gy, name, config):
     writer = None
     text_file = None
 
+    goals_x = [0, 1, 2]
+    goals_y = [0, 1, 2]
+
     goal_pos = [[(200, 150), (400, 150), (600, 150)],
                 [(200, 300), (400, 300), (600, 300)],
                 [(200, 450), (400, 450), (600, 450)]]
+
+    tau_opts = [[(0.56, 0.22), (0.49, 0.22), (0.42, 0.22)],
+                [(0.56, 0.15), (0.49, 0.15), (0.42, 0.15)],
+                [(0.56, 0.08), (0.49, 0.08), (0.42, 0.08)]]
 
     # Note that we have the goal positions listed above. The ones that are listed are the current ones that we are using
     counter = 0
@@ -91,7 +99,7 @@ def sim(gx, gy, name, config):
     i_frame = 0
     prev_pos = None
 
-    tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
+    #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
     tau = get_tau(gx, gy, tau_opts)
 
     for i_trajecory in range(config.num_traj):
@@ -122,7 +130,16 @@ def sim(gx, gy, name, config):
                     depth = Image.fromarray(np.uint8(np.zeros((600,800))))
                     depth.save(save_folder + str(i_frame) + "_depth.png")
                     vel = np.array(curr_pos)-np.array(prev_pos)
-                    writer.writerow([i_frame, curr_pos[0], curr_pos[1], 0, 0, 0, 0, 0, vel[0], vel[1], 0, 0, 0, 0, 0] + list(tau) + [goal_pos[gx][gy][0], goal_pos[gx][gy][1]])
+                    div = [200, 175] if config.normalize else [1, 1]
+                    sub = [400, 325] if config.normalize else [0, 0]
+                    save_tau = list(tau)
+                    if config.color:
+                        save_tau = [2*float(st)/255-1 for st in save_tau]
+                    elif config.normalize:
+                        save_tau = [(save_tau[0] - sub[0]) / div[0], (save_tau[1] - sub[1]) / div[1]]
+                    norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1]]
+                    norm_goal = [(goal_pos[gx][gy][0] - sub[0]) / div[0], (goal_pos[gx][gy][1] - sub[1]) / div[1]]
+                    writer.writerow([i_frame] + norm_pos + [0, 0, 0, 0, 0, vel[0], vel[1], 0, 0, 0, 0, 0] + save_tau + norm_goal)
                     i_frame += 1
                     prev_pos = curr_pos
                     print(i_frame, curr_pos, vel)
@@ -141,7 +158,16 @@ def sim(gx, gy, name, config):
                     depth = Image.fromarray(np.uint8(np.zeros((600,800))))
                     depth.save(save_folder + str(i_frame) + "_depth.png")
                     # Record data
-                    writer.writerow([i_frame, curr_pos[0], curr_pos[1], 0, 0, 0, 0, 0, vel[0], vel[1], 0, 0, 0, 0, 0] + list(tau) + [goal_pos[gx][gy][0], goal_pos[gx][gy][1]])
+                    div = [200, 175] if config.normalize else [1, 1]
+                    sub = [400, 325] if config.normalize else [0, 0]
+                    save_tau = list(tau)
+                    if config.color:
+                        save_tau = [2*float(st)/255-1 for st in save_tau]
+                    elif config.normalize:
+                        save_tau = [(save_tau[0] - sub[0]) / div[0], (save_tau[1] - sub[1]) / div[1]]
+                    norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1]]
+                    norm_goal = [(goal_pos[gx][gy][0] - sub[0]) / div[0], (goal_pos[gx][gy][1] - sub[1]) / div[1]]
+                    writer.writerow([i_frame] + norm_pos + [0, 0, 0, 0, 0, vel[0], vel[1], 0, 0, 0, 0, 0] + save_tau + norm_goal)
                     i_frame += 1
                     print(prev_pos, vel)
                 print("---Stop Recording---")
@@ -152,7 +178,7 @@ def sim(gx, gy, name, config):
                 save_counter = 0
                 i_frame = 0
                 # Reset for Next
-                tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
+                #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
                 tau = get_tau(gx, gy, tau_opts)
                 curr_pos = get_start()
                 break
@@ -170,6 +196,7 @@ def sim(gx, gy, name, config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Input to 2d simulation.')
     parser.add_argument('-c', '--color', dest='color', default=False, action='store_true', help='Used to activate color simulation.')
+    parser.add_argument('-no', '--normalize', dest='normalize', default=False, action='store_true', help='Used to activate position normalization.')
     parser.add_argument('-n', '--num_traj', default=300, type=int, help='Number of trajectories per button.')
     parser.add_argument('-b', '--buttons', default=None, nargs='*', help='Buttons to simulate, formatted like "0,0" or "2,1". Default is all.')
     parser.add_argument('-f', '--framerate', default=300, type=int, help='Framerate of simulation.')

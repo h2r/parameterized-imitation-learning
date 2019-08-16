@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from math import pi
 
 class LossException(Exception):
     def __init__(self, *args, **kwargs):
@@ -9,7 +10,7 @@ class BehaviorCloneLoss(nn.Module):
     """
     Behavior Clone Loss
     """
-    def __init__(self, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, eps=1e-6):
+    def __init__(self, lamb_l2=0.01, lamb_l1=1.0, lamb_c=0.005, lamb_aux=0.0001, eps=1e-7):
         super(BehaviorCloneLoss, self).__init__()
         self.lamb_l2 = lamb_l2
         self.lamb_l1 = lamb_l1
@@ -25,6 +26,14 @@ class BehaviorCloneLoss(nn.Module):
         if torch.any(torch.isnan(out)):
             print(out)
             raise LossException('nan in model outputs!')
+
+        '''
+        x = out[:, 0:1] * torch.sin(out[:, 1:2]) * torch.cos(out[:, 2:3])
+        y = out[:, 0:1] * torch.sin(out[:, 1:2]) * torch.sin(out[:, 2:3])
+        z = out[:, 0:1] * torch.cos(out[:, 1:2])
+
+        out = torch.cat([x, y, z, out[:, 3:]], dim=1)
+        '''
 
         l2_loss = self.l2(out, target)
         l1_loss = self.l1(out, target)
