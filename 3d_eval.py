@@ -115,8 +115,8 @@ class ImitateEval:
                 self.data = self.Data(pose=None,rgb=None,depth=None)
                 rate.sleep()
 
-                print(pose_to_move.position.y, -pose_to_move.position.x, pose_to_move.position.z)
-                print(distance(tau, (pose_to_move.position.y, -pose_to_move.position.x, pose_to_move.position.z)))
+                #print(pose_to_move.position.y, -pose_to_move.position.x, pose_to_move.position.z)
+                #print(distance(tau, (pose_to_move.position.y, -pose_to_move.position.x, pose_to_move.position.z)))
                 if distance(tau, (pose_to_move.position.y, -pose_to_move.position.x, pose_to_move.position.z)) < tolerance:
                     break
 
@@ -213,7 +213,7 @@ def sighandler(signal, frame):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Arguments for evaluating imitation net")
     parser.add_argument('-w', '--weights', required=True, help='Filepath for model weightsself.')
-    parser.add_argument('-t', '--tolerance', default=.1, type=float, help='Tolerance for button presses.')
+    parser.add_argument('-t', '--tolerance', default=0, type=float, help='Tolerance for button presses.')
     args = parser.parse_args()
     rospy.init_node('eval_imitation', log_level=rospy.DEBUG)
 

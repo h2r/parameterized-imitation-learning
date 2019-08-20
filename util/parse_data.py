@@ -20,15 +20,15 @@ num_of_test = 0
 
 
 def preprocess_image(path, crop_right=586, crop_lower=386):
-    img = Image.open(path)
-    # Crop
-    #img = img.crop((0, 0, crop_right, crop_lower))
-    img = img.resize((160,120))
-    img.save(path)
+    with Image.open(path) as img:
+        # Crop
+        #img = img.crop((0, 0, crop_right, crop_lower))
+        img = img.resize((160,120))
+        img.save(path)
 
 
 def preprocess_images(root_dir, cases, crop_right=586, crop_lower=386):
-    with Pool(processes=12) as pool:
+    with Pool(processes=8) as pool:
         all_imgs = []
         for i, case in enumerate(cases):
             dirs = [x[0] for x in os.walk(root_dir + case)][1:]
@@ -64,7 +64,7 @@ def parse_raw_data(mode, config):
                 splits[case] = {"train": dirs[:split_idx], "test": dirs[split_idx:]}
             # Go into every subdirectory
             sub_dirs += splits[case][mode]
-        with Pool(processes=12) as pool:
+        with Pool(processes=8) as pool:
             for result in tqdm.tqdm(pool.imap_unordered(parse_trajectory, zip(sub_dirs, [config]*len(sub_dirs)), chunksize=8), desc='Parsing data', total=len(sub_dirs)):
                 for row in result:
                     writer.writerow(row)
@@ -164,7 +164,7 @@ def clean_datapoint(sub_dir, data_file_name='/vectors.txt', clean_file_name='/cl
 
 def clean_kuka_data(root_dir, cases, data_file_name='/vectors.txt', clean_file_name='/clean_vector.txt'):
     print("Cleaning Kuka Data")
-    with Pool(processes=12) as pool:
+    with Pool(processes=8) as pool:
         dirs = []
         for i, case in enumerate(cases):
             dirs += [x[0] for x in os.walk(root_dir + case)][1:]
@@ -183,8 +183,11 @@ def norm_img(img):
 def get_row(ins):
     row, config = ins
     # Open Images and normalize [-1,1]
-    rgb = norm_img(np.array(Image.open(row[0]).convert("RGB")))
-    depth = norm_img(np.array(Image.open(row[1])))
+    rgb, depth = None, None
+    with Image.open(row[0]).convert("RGB") as img:
+        rgb = norm_img(np.array(img))
+    with Image.open(row[1]) as img:
+        depth = norm_img(np.array(img))
 
     # Reshape Images to have channel first
     rgb = np.transpose(rgb, (2, 0, 1))
@@ -218,31 +221,30 @@ def create_lmdb(mode, config, write_frequency=5000):
 
         print("Generate LMDB to {}".format(lmdb_path))
 
-        db = lmdb.open(lmdb_path, subdir=isdir,
+        with lmdb.open(lmdb_path, subdir=isdir,
                        map_size=1099511627776 * 2, readonly=False,
-                       meminit=False, map_async=True)
+                       meminit=False, map_async=True) as db:
 
-        # Begin iterating through to write
-        txn = db.begin(write=True)
-        total = sum(1 for line in csv.reader(info))
-        info.seek(0)
-        with Pool(processes=8) as pool:
-            for idx, result in enumerate(tqdm.tqdm(pool.imap_unordered(get_row, zip(csv.reader(info), [config]*total), chunksize=16), total=total, desc='Writing LMDB')):
-                txn.put(u'{}'.format(idx).encode('ascii'), serialize_pyarrow(result))
-                if idx % write_frequency == 0:
-                    txn.commit()
-                    txn = db.begin(write=True)
+            # Begin iterating through to write
+            txn = db.begin(write=True)
+            total = sum(1 for line in csv.reader(info))
+            info.seek(0)
+            with Pool(processes=8) as pool:
+                for idx, result in enumerate(tqdm.tqdm(pool.imap_unordered(get_row, zip(csv.reader(info), [config]*total), chunksize=16), total=total, desc='Writing LMDB')):
+                    txn.put(u'{}'.format(idx).encode('ascii'), serialize_pyarrow(result))
+                    if idx % write_frequency == 0:
+                        txn.commit()
+                        txn = db.begin(write=True)
 
-        # Once all the data is gone through
-        txn.commit()
-        keys = [u'{}'.format(k).encode('ascii') for k in range(total)]
-        with db.begin(write=True) as txn:
-            txn.put(b'__keys__', serialize_pyarrow(keys))
-            txn.put(b'__len__', serialize_pyarrow(len(keys)))
+            # Once all the data is gone through
+            txn.commit()
+            keys = [u'{}'.format(k).encode('ascii') for k in range(total)]
+            with db.begin(write=True) as txn:
+                txn.put(b'__keys__', serialize_pyarrow(keys))
+                txn.put(b'__len__', serialize_pyarrow(len(keys)))
 
-        print("Flushing database ...")
-        db.sync()
-        db.close()
+            print("Flushing database ...")
+            db.sync()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Input to data cleaner')

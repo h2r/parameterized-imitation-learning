@@ -14,6 +14,12 @@ import torch
 
 # note we want tau to be col, row == x, y
 # This is like the get goal method
+
+def get_tau_():
+    button = input('Please enter a button for the robot to try to press (e.g. "00", "12"): ')
+    return [int(b) for b in button]
+
+
 def get_tau(goal_x, goal_y, options):
     return options[goal_x][goal_y]
 
@@ -38,9 +44,15 @@ def process_images(np_array_img, is_it_rgb):
 def sim(model, config):
     goals_x = [0, 1, 2]
     goals_y = [0, 1, 2]
-    goal_pos = [[(200, 150), (400, 150), (600, 150)],
-                [(200, 300), (400, 300), (600, 300)],
-                [(200, 450), (400, 450), (600, 450)]]
+
+    goal_pos = [[(200, 150), (200, 300), (200, 450)],
+                [(400, 150), (400, 300), (400, 450)],
+                [(600, 150), (600, 300), (600, 450)]]
+
+    tau_opts = [[(0, 0), (0, 1), (0, 2)],
+                [(1, 0), (1, 1), (1, 2)],
+                [(2, 0), (2, 1), (2, 2)]]
+
 
     # These are magic numbers
     RECT_X = 60
@@ -73,11 +85,12 @@ def sim(model, config):
     rgb = None
     depth = None
 
-    gx, gy = np.random.randint(0, 3, (2,))
-    tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
-    tau = get_tau(gx, gy, tau_opts)
-
+    gx, gy = get_tau_()#np.random.randint(0, 3, (2,))
+    #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
+    tau = (gx, gy)#get_tau(gx, gy, tau_opts)
+    a = 0
     while run:
+        a += 1
         clock.tick(config.framerate)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -87,9 +100,9 @@ def sim(model, config):
                 if event.key == S_KEY:
                     curr_pos = get_start()
                 if event.key == R_KEY:
-                    gx, gy = np.random.randint(0, 3, (2,))
-                    tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
-                    tau = get_tau(gx, gy, tau_opts)
+                    gx, gy = get_tau_()#np.random.randint(0, 3, (2,))
+                    #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
+                    tau = (gx, gy)#get_tau(gx, gy, tau_opts)
                 if event.key == ESCAPE_KEY:
                     run = False
                     break
@@ -125,7 +138,7 @@ def sim(model, config):
         print(eof)
         print(tau)
         print(aux)
-        print(get_tau(gx, gy, goal_pos))
+        #print(get_tau(gx, gy, goal_pos))
         print(out)
         print(new_pos)
         print('========')
@@ -138,6 +151,8 @@ def sim(model, config):
         pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
         pygame.display.update()
 
+        if a == 200:
+            break
     pygame.quit()
     return 0
 

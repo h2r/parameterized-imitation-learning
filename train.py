@@ -138,89 +138,95 @@ def train(config):
     lowest_test_cost = float('inf')
 
     if False: # config.weight is not None:
-        cost_file = open(config.save_path+"/costs.txt", 'a')
+        cost_file = 'a'
     else:
-        cost_file = open(config.save_path+"/costs.txt", 'w+')
+        cost_file = 'w+'
 
-    gradients = torch.zeros((100, 2))
+    with open(config.save_path+"/costs.txt", cost_file) as cost_file:
+        gradients = torch.zeros((100, 2))
 
-    for epoch in tqdm.trange(1, config.num_epochs+1, desc='Epochs'):
         datasets = {mode: ImitationLMDB(config.data_file, mode) for mode in modes}
-        dataloaders = {mode: DataLoader(datasets[mode], batch_size=config.batch_size, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
-        data_sizes = {mode: len(datasets[mode]) for mode in modes}
-        for mode in modes:
-            running_loss = 0.0
-            for data in tqdm.tqdm(dataloaders[mode], desc='{}:{}/{}'.format(mode, epoch, config.num_epochs),ascii=True):
-                inputs = data[:-2]
-                targets = data[-2:]
-                curr_bs = inputs[0].shape[0]
-                inputs = [x.to(config.device, non_blocking=False) for x in inputs]
-                targets = [x.to(config.device, non_blocking=False) for x in targets]
+        for epoch in tqdm.trange(1, config.num_epochs+1, desc='Epochs'):
 
-                if not config.sim:
-                    targets[0][:, 3:] = 0
-                    targets[1][:, 3:] = 0
+            if epoch == 1:
+                print(datasets['train'][0][3])
 
-                if config.zero_eof:
-                    inputs[2][:, 3:] = 0   # No trajectory info from eof
+            dataloaders = {mode: DataLoader(datasets[mode], batch_size=config.batch_size, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
+            data_sizes = {mode: len(datasets[mode]) for mode in modes}
+            for mode in modes:
+                running_loss = 0.0
+                for data in tqdm.tqdm(dataloaders[mode], desc='{}:{}/{}'.format(mode, epoch, config.num_epochs),ascii=True):
+                    inputs = data[:-2]
+                    targets = data[-2:]
+                    curr_bs = inputs[0].shape[0]
+                    inputs = [x.to(config.device, non_blocking=False) for x in inputs]
+                    targets = [x.to(config.device, non_blocking=False) for x in targets]
 
-                inputs[3][inputs[3][:, 0] < .455, 0] = 2
-                inputs[3][inputs[3][:, 0] < .525, 0] = 1
-                inputs[3][inputs[3][:, 0] < 1, 0] = 0
-                inputs[3][inputs[3][:, 1] < .115, 1] = 2
-                inputs[3][inputs[3][:, 1] < .185, 1] = 1
-                inputs[3][inputs[3][:, 1] < 1, 1] = 0
+                    if not config.sim:
+                        targets[0][:, 3:] = 0
+                        targets[1][:, 3:] = 0
 
-                for input in inputs:
-                    if torch.any(torch.isnan(input)):
-                        input.zero_()
+                    if config.zero_eof:
+                        inputs[2][:, 3:] = 0   # No trajectory info from eof
 
-                with torch.autograd.detect_anomaly():
-                    if mode == "train":
-                        model.train()
-                        optimizer.zero_grad()
+                    inputs[3][inputs[3][:, 0] < .455, 0] = 2
+                    inputs[3][inputs[3][:, 0] < .525, 0] = 1
+                    inputs[3][inputs[3][:, 0] < 1, 0] = 0
+                    inputs[3][inputs[3][:, 1] < .115, 1] = 2
+                    inputs[3][inputs[3][:, 1] < .185, 1] = 1
+                    inputs[3][inputs[3][:, 1] < 1, 1] = 0
 
-                        out, aux_out = model(inputs[0], inputs[1], inputs[2] * config.scale, inputs[3] * config.scale)
-                        loss = criterion(out, aux_out, targets[0] * config.scale, targets[1] * config.scale)
-                        if l2_norm != 0:
-                            l2_crit = torch.nn.MSELoss(size_average=False)
-                            l2_loss = 0
-                            for param in model.parameters():
-                                l2_loss += l2_crit(param, torch.zeros_like(param))
-                            loss += l2_norm * l2_loss
-                            #loss += l2_norm * torch.sum(l2_crit(param) for param in model.parameters())
+                    for input in inputs:
+                        if torch.any(torch.isnan(input)):
+                            input.zero_()
 
-                        loss.backward()
-                        optimizer.step()
-                        running_loss += loss.item()#*curr_bs)
-                    elif mode == "test":
-                        model.eval()
-                        with torch.no_grad():
+                    with torch.autograd.detect_anomaly():
+                        if mode == "train":
+                            model.train()
+                            optimizer.zero_grad()
+
                             out, aux_out = model(inputs[0], inputs[1], inputs[2] * config.scale, inputs[3] * config.scale)
                             loss = criterion(out, aux_out, targets[0] * config.scale, targets[1] * config.scale)
+                            if l2_norm != 0:
+                                l2_crit = torch.nn.MSELoss(size_average=False)
+                                l2_loss = 0
+                                for param in model.parameters():
+                                    l2_loss += l2_crit(param, torch.zeros_like(param))
+                                loss += l2_norm * l2_loss
+                                #loss += l2_norm * torch.sum(l2_crit(param) for param in model.parameters())
+
+                            loss.backward()
+                            optimizer.step()
                             running_loss += loss.item()#*curr_bs)
-            cost = running_loss/data_sizes[mode]
-            cost_file.write(str(epoch)+","+mode+","+str(cost)+"\n")
-            if mode == 'test':
-                if lowest_test_cost >= cost:
-                    torch.save({
-                        'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'kwargs': kwargs,
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'loss': cost
-                        }, config.save_path+"/best_checkpoint.tar")
-                    lowest_test_cost = cost
-                if epoch % config.save_rate == 0:
-                    torch.save({
-                        'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'kwargs': kwargs,
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'loss': cost
-                        }, config.save_path+"/"+str(epoch)+"_checkpoint.tar")
-            tqdm.tqdm.write("Epoch {} {} loss: {}".format(epoch, mode, cost))
-    cost_file.close()
+                        elif mode == "test":
+                            model.eval()
+                            with torch.no_grad():
+                                out, aux_out = model(inputs[0], inputs[1], inputs[2] * config.scale, inputs[3] * config.scale)
+                                loss = criterion(out, aux_out, targets[0] * config.scale, targets[1] * config.scale)
+                                running_loss += loss.item()#*curr_bs)
+                cost = running_loss/data_sizes[mode]
+                cost_file.write(str(epoch)+","+mode+","+str(cost)+"\n")
+                if mode == 'test':
+                    if lowest_test_cost >= cost:
+                        torch.save({
+                            'epoch': epoch,
+                            'model_state_dict': model.state_dict(),
+                            'kwargs': kwargs,
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'loss': cost
+                            }, config.save_path+"/best_checkpoint.tar")
+                        lowest_test_cost = cost
+                    if epoch % config.save_rate == 0:
+                        torch.save({
+                            'epoch': epoch,
+                            'model_state_dict': model.state_dict(),
+                            'kwargs': kwargs,
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'loss': cost
+                            }, config.save_path+"/"+str(epoch)+"_checkpoint.tar")
+                tqdm.tqdm.write("Epoch {} {} loss: {}".format(epoch, mode, cost))
+        for mode in modes:
+            datasets[mode].close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Input to data cleaner')

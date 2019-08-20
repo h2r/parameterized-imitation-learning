@@ -58,13 +58,13 @@ def evaluate(config):
     goals_x = [0, 1, 2]
     goals_y = [0, 1, 2]
 
-    goal_pos = [[(200, 150), (400, 150), (600, 150)],
-                [(200, 300), (400, 300), (600, 300)],
-                [(200, 450), (400, 450), (600, 450)]]
+    goal_pos = [[(200, 150), (200, 300), (200, 450)],
+                [(400, 150), (400, 300), (400, 450)],
+                [(600, 150), (600, 300), (600, 450)]]
 
-    tau_opts = [[(0.56, 0.22), (0.49, 0.22), (0.42, 0.22)],
-                [(0.56, 0.15), (0.49, 0.15), (0.42, 0.15)],
-                [(0.56, 0.08), (0.49, 0.08), (0.42, 0.08)]]
+    tau_opts = [[(0, 0), (0, 1), (0, 2)],
+                [(1, 0), (1, 1), (1, 2)],
+                [(2, 0), (2, 1), (2, 2)]]
 
     # These are magic numbers
     RECT_X = 60
@@ -92,8 +92,11 @@ def evaluate(config):
 
     for r in range(3):
         for c in range(3):
-            tau    = get_tau(r, c, tau_opts)
+            gx = c
+            gy = r
+            tau = get_tau(gx, gy, tau_opts)
             trials = torch.zeros(config.eval_traj)
+            print('Evaluating button %d, %d' % (gx, gy))
 
             for i in range(config.eval_traj):
                 # Set the cursor
@@ -136,6 +139,7 @@ def evaluate(config):
                     in_tau = torch.FloatTensor(tau)
                     if config.color:
                         in_tau = 2 * in_tau / 255 - 1
+
                     out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof))
                     out = out.squeeze()
                     delta_x = out[0].item()
@@ -145,7 +149,7 @@ def evaluate(config):
                     if (new_pos[0] < 0) or (new_pos[0] > 800) or (new_pos[1] < 0) or (new_pos[1] > 600)\
                     or (distance(new_pos, curr_pos) < config.stop_tolerance)\
                     or (run == config.max_iters): # Is it out of bounds / stopped / out of time
-                        trials[i] = 1 if distance(new_pos, goal_pos[r][c]) < (RECT_X + 20) else 0# Is it on the button
+                        trials[i] = 1 if distance(new_pos, goal_pos[gx][gy]) < 55 else 0# Is it on the button
                         break
 
                     curr_pos = new_pos
@@ -158,6 +162,7 @@ def evaluate(config):
                     pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
                     pygame.display.update()
 
+            print('Successfully pressed the button %d out of %d times for an accuracy percentage of %d' % (torch.sum(trials), config.eval_traj, 100 * torch.sum(trials) / config.eval_traj))
             rates[r, c] = torch.sum(trials) / config.eval_traj
 
     torch.save(rates, config.weights[:config.weights.rfind('/')] + '/button_eval_percentages.pt')
@@ -172,9 +177,9 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--data_root', required=True, help='Path to cleaned un-compiled data')
     parser.add_argument('-d', '--data_file', required=True, help='path of temporary compiled dataset')
     parser.add_argument('-o', '--out_root', required=True, help='Path to folder containing outputs')
-    parser.add_argument('-n', '--num_epochs', default=1000, type=int, help='Number of epochs per train')
+    parser.add_argument('-n', '--num_epochs', default=100, type=int, help='Number of epochs per train')
     parser.add_argument('-b', '--batch_size', default=64, type=int, help='Batch Size')
-    parser.add_argument('-lr', '--learning_rate', default=0.0001, type=float, help='Learning Rate')
+    parser.add_argument('-lr', '--learning_rate', default=0.0005, type=float, help='Learning Rate')
     parser.add_argument('-de', '--device', default="cuda:0", type=str, help='The cuda device')
     parser.add_argument('-m', '--max_arrangements', default=10, type=int, help='Number of arrangements per button count')
     parser.add_argument('-s', '--scale', default=1, type=float, help='Scaling factor for non-image data')
@@ -252,23 +257,24 @@ if __name__ == '__main__':
     config.stop_tolerance = args.stop_tolerance
     config.max_iters      = args.max_iters
 
-    if config.sim:
-        makedirs(config.root_dir)
-        for x, y in list(itertools.product([0, 1, 2], [0, 1, 2])):
-            if sim(x, y, str(x)+str(y), config):
-                raise Exception('You exited the data gathering!!')
-    else:
+    try:
         assert(os.path.exists(config.root_dir))
         for x, y in list(itertools.product([0, 1, 2], [0, 1, 2])):
             assert(os.path.exists(config.root_dir + str(x) + str(y)))
+    except AssertionError:
+        if config.sim:
+            makedirs(config.root_dir)
+            for x, y in list(itertools.product([0, 1, 2], [0, 1, 2])):
+                if sim(x, y, str(x)+str(y), config):
+                    raise Exception('You exited the data gathering!!')
 
-    print("Cleaning Data...")
-    clean_kuka_data(config.root_dir, ALL_CASES)
+            ("Cleaning Data...")
+            clean_kuka_data(config.root_dir, ALL_CASES)
 
     makedirs(config.dest_dir)
     makedirs(config.out_root)
 
-    for num_buttons in range(1, 9):
+    for num_buttons in range(1, 10):
         for arrangement in arrange(num_buttons, config.max_arrangements):
             config.save_path   = config.out_root + '/' + str(num_buttons) + '/' + str(arrangement)
             config.train_cases = arrangement

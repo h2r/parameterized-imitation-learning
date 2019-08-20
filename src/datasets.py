@@ -49,3 +49,6 @@ class ImitationLMDB(Dataset):
 
     def __len__(self):
         return self.length
+
+    def close(self):
+        self.env.close()
