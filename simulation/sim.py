@@ -18,10 +18,17 @@ def get_tau(goal_x, goal_y, options):
     return options[goal_x][goal_y]
 
 def get_start(win_y=600, win_x=800):
-    min_x = win_x - 40
-    max_x = win_x - 20
-    min_y = 20
-    max_y = win_y - min_y
+    horiz = np.random.uniform() < .5
+    if horiz:
+        min_x = 20
+        max_x = win_x - min_x
+        min_y = 15
+        max_y = 30
+    else:
+        min_x = win_x - 40
+        max_x = win_x - 20
+        min_y = 20
+        max_y = win_y - min_y
     x = round(np.random.uniform(min_x, max_x))
     y = round(np.random.uniform(min_y, max_y))
     return x, y
@@ -33,7 +40,18 @@ def get_next_move(curr_x, curr_y, goal_x, goal_y):
     elif abs(curr_x - goal_x) > 5 and abs(curr_x - goal_x) <= 50:
         x = (goal_x - curr_x)/10
     else:
+        if curr_x > goal_x:
+            x = (goal_x - curr_x)/100 + np.random.uniform(-3,1)
+        else:
+            x = (goal_x - curr_x)/100 + np.random.uniform(-1,3)
+    '''
+    if abs(curr_x - goal_x) <= 5:
+        x = goal_x - curr_x
+    elif abs(curr_x - goal_x) > 5 and abs(curr_x - goal_x) <= 50:
+        x = (goal_x - curr_x)/10
+    else:
         x = (goal_x - curr_x)/80 + np.random.uniform(-3, 0)
+    '''
 
     # Vertical Movement
     if abs(curr_y - goal_y) <= 5:
@@ -94,28 +112,23 @@ def sim(gx, gy, name, config):
 
     clock = pygame.time.Clock()
 
-    recording = False
     save_counter = 0
     i_frame = 0
     prev_pos = None
 
     #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
     tau = get_tau(gx, gy, tau_opts)
-    text_file
 
-    with open(save_folder + 'vectors.txt', 'w') as text_file:
-        for i_trajecory in range(config.num_traj):
+    for i_trajecory in range(config.num_traj):
+        folder = task_path + str(i_trajecory) + '/'
+        os.makedirs(folder, exist_ok=True)
+        save_folder = folder
+        with open(save_folder + 'vectors.txt', 'w') as text_file:
+            writer = csv.writer(text_file)
+            print("===Start Recording===")
+            prev_pos = curr_pos
             while True:
                 clock.tick(config.framerate)
-                if not recording:
-                    recording = True
-                    folder = task_path + str(i_trajecory) + '/'
-                    os.makedirs(folder, exist_ok=True)
-                    save_folder = folder
-                    writer = csv.writer(text_file)
-                    print("===Start Recording===")
-                    prev_pos = curr_pos
-
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         return 1
@@ -125,34 +138,33 @@ def sim(gx, gy, name, config):
                             curr_pos = get_start()
                         if event.key == pygame.K_ESCAPE:
                             return 1
-                if recording:
-                    if save_counter % 3 == 0:
-                        pygame.image.save(screen, save_folder+str(i_frame)+"_rgb.png")
-                        depth = Image.fromarray(np.uint8(np.zeros((600,800))))
-                        depth.save(save_folder + str(i_frame) + "_depth.png")
-                        vel = np.array(curr_pos)-np.array(prev_pos)
-                        div = [200, 175] if config.normalize else [1, 1]
-                        sub = [400, 325] if config.normalize else [0, 0]
-                        save_tau = list(tau)
-                        if config.color:
-                            save_tau = [2*float(st)/255-1 for st in save_tau]
-                        elif config.normalize:
-                            save_tau = [(save_tau[0] - sub[0]) / div[0], (save_tau[1] - sub[1]) / div[1]]
-                        norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1]]
-                        norm_goal = [(goal_pos[gx][gy][0] - sub[0]) / div[0], (goal_pos[gx][gy][1] - sub[1]) / div[1]]
-                        writer.writerow([i_frame] + norm_pos + [0, 0, 0, 0, 0, vel[0], vel[1], 0, 0, 0, 0, 0] + save_tau + norm_goal)
-                        i_frame += 1
-                        prev_pos = curr_pos
-                        print(i_frame, curr_pos, vel)
-                    save_counter += 1
-                # Calculate the trajectory
-                if recording:
-                    delta_x, delta_y = get_next_move(curr_pos[0], curr_pos[1], goal_pos[gx][gy][0], goal_pos[gx][gy][1])
-                    new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y]
-                    curr_pos = new_pos
 
-                if (curr_pos[0] == goal_pos[gx][gy][0]) and (curr_pos[1] == goal_pos[gx][gy][1]) and recording:
-                    recording = False
+                if save_counter % 3 == 0:
+                    pygame.image.save(screen, save_folder+str(i_frame)+"_rgb.png")
+                    depth = Image.fromarray(np.uint8(np.zeros((600,800))))
+                    depth.save(save_folder + str(i_frame) + "_depth.png")
+                    vel = np.array(curr_pos)-np.array(prev_pos)
+                    div = [200, 175] if config.normalize else [1, 1]
+                    sub = [400, 325] if config.normalize else [0, 0]
+                    save_tau = list(tau)
+                    if config.color:
+                        save_tau = [2*float(st)/255-1 for st in save_tau]
+                    elif config.normalize:
+                        save_tau = [(save_tau[0] - sub[0]) / div[0], (save_tau[1] - sub[1]) / div[1]]
+                    norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1]]
+                    norm_goal = [(goal_pos[gx][gy][0] - sub[0]) / div[0], (goal_pos[gx][gy][1] - sub[1]) / div[1]]
+                    writer.writerow([i_frame] + norm_pos + [0, 0, 0, 0, 0, vel[0], vel[1], 0, 0, 0, 0, 0] + save_tau + norm_goal)
+                    i_frame += 1
+                    prev_pos = curr_pos
+                    print(i_frame, curr_pos, vel)
+                save_counter += 1
+
+                # Calculate the trajectory
+                delta_x, delta_y = get_next_move(curr_pos[0], curr_pos[1], goal_pos[gx][gy][0], goal_pos[gx][gy][1])
+                new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y]
+                curr_pos = new_pos
+
+                if (curr_pos[0] == goal_pos[gx][gy][0]) and (curr_pos[1] == goal_pos[gx][gy][1]):
                     vel = (0, 0, 0)
                     for _ in range(5):
                         pygame.image.save(screen, save_folder + str(i_frame) + "_rgb.png")
