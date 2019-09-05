@@ -49,7 +49,10 @@ def get_next_move(curr_x, curr_y, goal_x, goal_y):
     elif abs(curr_x - goal_x) > 5 and abs(curr_x - goal_x) <= 50:
         x = (goal_x - curr_x)/10
     else:
-        x = (goal_x - curr_x)/80 + np.random.uniform(-3, 0)
+        if curr_x > goal_x:
+            x = (goal_x - curr_x)/100 + np.random.uniform(-3,1)
+        else:
+            x = (goal_x - curr_x)/100 + np.random.uniform(-1,3)
     '''
 
     # Vertical Movement
