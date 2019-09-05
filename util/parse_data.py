@@ -28,7 +28,7 @@ def preprocess_image(path, crop_right=586, crop_lower=386):
 
 
 def preprocess_images(root_dir, cases, crop_right=586, crop_lower=386):
-    with Pool(processes=8) as pool:
+    with Pool(processes=6) as pool:
         all_imgs = []
         for i, case in enumerate(cases):
             dirs = [x[0] for x in os.walk(root_dir + case)][1:]
@@ -64,14 +64,31 @@ def parse_raw_data(mode, config):
                 splits[case] = {"train": dirs[:split_idx], "test": dirs[split_idx:]}
             # Go into every subdirectory
             sub_dirs += splits[case][mode]
+        '''
         with Pool(processes=8) as pool:
             for result in tqdm.tqdm(pool.imap_unordered(parse_trajectory, zip(sub_dirs, [config]*len(sub_dirs)), chunksize=8), desc='Parsing data', total=len(sub_dirs)):
+                if type(result) is str:
+                    print(result)
+                else:
+                    for row in result:
+                        writer.writerow(row)
+                        if mode == 'train':
+                            num_of_train += 1
+                        else:
+                            num_of_test += 1
+        '''
+        for ins in zip(sub_dirs, [config]*len(sub_dirs)):
+            result = parse_trajectory(ins)
+            if type(result) is str:
+                print(result)
+            else:
                 for row in result:
                     writer.writerow(row)
                     if mode == 'train':
                         num_of_train += 1
                     else:
                         num_of_test += 1
+        #'''
 
 def parse_trajectory(ins):
     sub_dir, config = ins
@@ -99,7 +116,16 @@ def parse_trajectory(ins):
             # rgb, depth
             row = [root+"/"+pics[i+1], root+"/"+pics[i]]
             curr_idx = int(pics[i][:-10])
-            data = vectors[curr_idx == vectors[0]]
+            try:
+                data = vectors[curr_idx == vectors[0]]
+            except:
+                a = '=======\n'
+                a += str(cur_idx)
+                a += '+++++++\n'
+                a += str(vectors[0])
+                a += '======='
+                return a
+
             if i == 0:
                 prevs = [curr_idx for _ in range(5)]
             else:
@@ -164,7 +190,7 @@ def clean_datapoint(sub_dir, data_file_name='/vectors.txt', clean_file_name='/cl
 
 def clean_kuka_data(root_dir, cases, data_file_name='/vectors.txt', clean_file_name='/clean_vector.txt'):
     print("Cleaning Kuka Data")
-    with Pool(processes=8) as pool:
+    with Pool(processes=6) as pool:
         dirs = []
         for i, case in enumerate(cases):
             dirs += [x[0] for x in os.walk(root_dir + case)][1:]
@@ -229,13 +255,21 @@ def create_lmdb(mode, config, write_frequency=5000):
             txn = db.begin(write=True)
             total = sum(1 for line in csv.reader(info))
             info.seek(0)
-            with Pool(processes=8) as pool:
-                for idx, result in enumerate(tqdm.tqdm(pool.imap_unordered(get_row, zip(csv.reader(info), [config]*total), chunksize=16), total=total, desc='Writing LMDB')):
+            '''
+            with Pool(processes=6) as pool:
+                for idx, result in enumerate(tqdm.tqdm(pool.imap_unordered(get_row, zip(csv.reader(info), [config]*total), chunksize=1), total=total, desc='Writing LMDB')):
                     txn.put(u'{}'.format(idx).encode('ascii'), serialize_pyarrow(result))
                     if idx % write_frequency == 0:
                         txn.commit()
                         txn = db.begin(write=True)
-
+            '''
+            for idx, ins in enumerate(zip(csv.reader(info), [config]*total)):
+                result = get_row(ins)
+                txn.put(u'{}'.format(idx).encode('ascii'), serialize_pyarrow(result))
+                if idx % write_frequency == 0:
+                    txn.commit()
+                    txn = db.begin(write=True)
+            #'''
             # Once all the data is gone through
             txn.commit()
             keys = [u'{}'.format(k).encode('ascii') for k in range(total)]

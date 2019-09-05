@@ -121,7 +121,7 @@ class Novograd(Optimizer):
 def train(config):
     modes = ['train', 'test']
     # Define model, dataset, dataloader, loss, optimizer
-    kwargs = {'use_bias':config.use_bias, 'eof_size':config.eof_size, 'tau_size':config.tau_size, 'aux_size':config.aux_size, 'out_size':config.out_size}
+    kwargs = {'use_bias':config.use_bias, 'use_tau':config.use_tau, 'eof_size':config.eof_size, 'tau_size':config.tau_size, 'aux_size':config.aux_size, 'out_size':config.out_size}
     model = Model(**kwargs).to(config.device)
     if False: # config.weight is not None:
         checkpoint = torch.load(config.weight, map_location=config.device)
@@ -148,8 +148,8 @@ def train(config):
         datasets = {mode: ImitationLMDB(config.data_file, mode) for mode in modes}
         for epoch in tqdm.trange(1, config.num_epochs+1, desc='Epochs'):
 
-            if epoch == 1:
-                print(datasets['train'][0][3])
+            #if epoch == 1:
+            #    print(datasets['train'][0][3])
 
             dataloaders = {mode: DataLoader(datasets[mode], batch_size=config.batch_size, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
             data_sizes = {mode: len(datasets[mode]) for mode in modes}
@@ -175,6 +175,9 @@ def train(config):
                     inputs[3][inputs[3][:, 1] < .115, 1] = 2
                     inputs[3][inputs[3][:, 1] < .185, 1] = 1
                     inputs[3][inputs[3][:, 1] < 1, 1] = 0
+
+                    if not config.use_tau:
+                        inputs[3] = inputs[3][:, 0].long()*3 + inputs[3][:, 1].long()
 
                     for input in inputs:
                         if torch.any(torch.isnan(input)):
@@ -251,6 +254,7 @@ if __name__ == '__main__':
     parser.add_argument('-l_two', '--l2_norm', default=0.002, type=float, help='l2 norm constant')
     parser.add_argument('-opt', '--optimizer', default='adam', help='Optimizer, currently options are "adam" and "novograd"')
     parser.add_argument('-si', '--sim', default=False, dest='sim', action='store_true', help='Flag indicating data is from 2d sim')
+    parser.add_argument('-u', '--use_tau', default=True, dest='sim', action='store_false', help='Flag indicating not to use tau')
     args = parser.parse_args()
 
     device = None

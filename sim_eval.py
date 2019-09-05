@@ -11,6 +11,7 @@ import numpy as np
 import itertools
 from src.model import Model
 import torch
+from simulation.sim import get_start
 
 # note we want tau to be col, row == x, y
 # This is like the get goal method
@@ -20,17 +21,16 @@ def get_tau_():
     return [int(b) for b in button]
 
 
+def distance(a, b):
+    dist = [np.abs(a[i] - b[i]) for i in range(len(a))]
+    dist = [e**2 for e in dist]
+    dist = sum(dist)
+    return np.sqrt(dist)
+
+
 def get_tau(goal_x, goal_y, options):
     return options[goal_x][goal_y]
 
-def get_start(win_y=600, win_x=800):
-    min_x = win_x - 40
-    max_x = win_x - 20
-    min_y = 20
-    max_y = win_y - min_y
-    x = round(np.random.uniform(min_x, max_x))
-    y = round(np.random.uniform(min_y, max_y))
-    return x, y
 
 def process_images(np_array_img, is_it_rgb):
     img = 2*((np_array_img - np.amin(np_array_img))/(np.amax(np_array_img)-np.amin(np_array_img))) - 1
@@ -127,9 +127,8 @@ def sim(model, config):
             eof = torch.cat([torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0]), eof[0:12]])
 
         # Calculate the trajectory
-        in_tau = torch.FloatTensor(tau)
-        if config.color:
-            in_tau = 2 * in_tau / 255 - 1
+        in_tau = torch.zeros(1)
+        in_tau[0] = tau[0]*3 + tau[1]
         out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof))
         out = out.squeeze()
         delta_x = out[0].item()
@@ -141,6 +140,9 @@ def sim(model, config):
         #print(get_tau(gx, gy, goal_pos))
         print(out)
         print(new_pos)
+        print(distance(curr_pos, new_pos))
+        #if (distance(curr_pos, new_pos)) < 1.5:
+        #    time.sleep(5)
         print('========')
         curr_pos = new_pos
 
@@ -151,8 +153,8 @@ def sim(model, config):
         pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
         pygame.display.update()
 
-        if a == 200:
-            break
+        #if a == 200:
+        #    break
     pygame.quit()
     return 0
 

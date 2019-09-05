@@ -1,8 +1,8 @@
 from train import train
-from simulation.sim import sim
+from simulation.sim import sim, get_start
 from util.parse_data import clean_kuka_data, parse_raw_data, create_lmdb
 from src.model import Model
-from sim_eval import get_tau, get_start, process_images
+from sim_eval import get_tau, process_images
 
 from torch import device as torch_device
 from torch.cuda import is_available as use_cuda
@@ -26,12 +26,29 @@ from PIL import Image
 import numpy as np
 import itertools
 import torch
+import inspect
 
 
 ALL_CASES = ['00', '01', '02',
              '10', '11', '12',
              '20', '21', '22']
 
+descriptors = set()
+def print_open_fds(print_all=False):
+    global descriptors
+    (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
+    fds = set(os.listdir('/proc/self/fd/'))
+    new_fds = fds - descriptors
+    closed_fds = descriptors - fds
+    descriptors = fds
+
+    if print_all:
+        print("{}:{} ALL file descriptors: {}".format(filename, line_number, fds))
+
+    if new_fds:
+        print("{}:{} new file descriptors: {}".format(filename, line_number, new_fds))
+    if closed_fds:
+        print("{}:{} closed file descriptors: {}".format(filename, line_number, closed_fds))
 
 class Config:
     pass
@@ -136,11 +153,14 @@ def evaluate(config):
                         eof = torch.cat([torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0]), eof[0:12]])
 
                     # Calculate the trajectory
-                    in_tau = torch.FloatTensor(tau)
-                    if config.color:
-                        in_tau = 2 * in_tau / 255 - 1
+                    if config.use_tau:
+                        in_tau = torch.FloatTensor(tau)
+                        if config.color:
+                            in_tau = 2 * in_tau / 255 - 1
+                    else:
+                        in_tau = torch.LongTensor([tau[0]*3 + tau[1]])
 
-                    out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof))
+                    out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1))
                     out = out.squeeze()
                     delta_x = out[0].item()
                     delta_y = out[1].item()
@@ -274,26 +294,40 @@ if __name__ == '__main__':
     makedirs(config.dest_dir)
     makedirs(config.out_root)
 
-    for num_buttons in range(1, 10):
+    h = config.dest_dir
+    taus = ['onehot', 'tau']
+
+    for num_buttons in range(1,6):
         for arrangement in arrange(num_buttons, config.max_arrangements):
-            config.save_path   = config.out_root + '/' + str(num_buttons) + '/' + str(arrangement)
-            config.train_cases = arrangement
-            config.weights     = config.save_path + '/best_checkpoint.tar'
+            for use_tau in [0, 1]:
+                print_open_fds(True)
+                config.save_path   = config.out_root + '/' + taus[use_tau] + '/' + str(num_buttons) + '/' + str(arrangement)
+                config.use_tau     = use_tau
+                config.train_cases = arrangement
+                config.weights     = config.save_path + '/best_checkpoint.tar'
 
-            makedirs(config.save_path)
+                makedirs(config.save_path)
 
-            # Make dataset
-            for mode in ['train', 'test']:
-                parse_raw_data(mode, config)
-                create_lmdb(mode, config)
+                ##
+                '''
+                config.dest_dir = h + '/' + str(arrangement)
+                config.data_file = h + '/' + str(arrangement)
+                makedirs(config.dest_dir)
+                '''
+                ##
 
-            # Train on dataset
-            train(config)
+                # Make dataset
+                for mode in ['train', 'test']:
+                    parse_raw_data(mode, config)
+                    create_lmdb(mode, config)
 
-            # Delete dataset
-            rmtree(config.dest_dir)
-            makedirs(config.dest_dir)
+                # Train on dataset
+                train(config)
 
-            # eval
-            if config.sim:
-                evaluate(config)
+                # Delete dataset
+                rmtree(config.dest_dir)
+                makedirs(config.dest_dir)
+
+                # eval
+                if config.sim:
+                    evaluate(config)

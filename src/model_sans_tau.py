@@ -36,15 +36,13 @@ class Model(nn.Module):
     """
     The net implemented from Deep Imitation Learning from Virtual Teleoperation with parameterization
     """
-    def __init__(self, use_bias=True, use_tau=True, eof_size=15, tau_size=3, aux_size=6, out_size=7):
+    def __init__(self, use_bias=True, eof_size=15, tau_size=3, aux_size=6, out_size=7):
         super(Model, self).__init__()
         self.use_bias = use_bias
-        self.use_tau  = use_tau
         self.eof_size = eof_size
         self.tau_size = tau_size
         self.aux_size = aux_size
         self.out_size = out_size
-
 
         # Note that all of the layers have valid padding
         self.layer1_rgb = nn.Conv2d(3, 64, kernel_size=7, stride=2, bias=use_bias)
@@ -54,9 +52,6 @@ class Model(nn.Module):
         self.conv2 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
         self.conv3 = nn.Conv2d(32, 32, kernel_size=3, bias=use_bias)
         self.spatial_softmax = SpatialSoftmax(53, 73, 32)
-
-        if not use_tau:
-            self.augment_tau = nn.Embedding(9, tau_size)
 
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
@@ -95,8 +90,6 @@ class Model(nn.Module):
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
         x = self.spatial_softmax(x)
-        if not self.use_tau:
-            tau = self.augment_tau(tau.view(-1))
         x = torch.cat([x, tau], dim=1)
 
         aux = self.aux(x)
