@@ -169,12 +169,13 @@ def train(config):
                     if config.zero_eof:
                         inputs[2][:, 3:] = 0   # No trajectory info from eof
 
-                    inputs[3][inputs[3][:, 0] < .455, 0] = 2
-                    inputs[3][inputs[3][:, 0] < .525, 0] = 1
-                    inputs[3][inputs[3][:, 0] < 1, 0] = 0
-                    inputs[3][inputs[3][:, 1] < .115, 1] = 2
-                    inputs[3][inputs[3][:, 1] < .185, 1] = 1
-                    inputs[3][inputs[3][:, 1] < 1, 1] = 0
+                    if config.abstract_tau:
+                        inputs[3][inputs[3][:, 0] < .455, 0] = 2
+                        inputs[3][inputs[3][:, 0] < .525, 0] = 1
+                        inputs[3][inputs[3][:, 0] < 1, 0] = 0
+                        inputs[3][inputs[3][:, 1] < .115, 1] = 2
+                        inputs[3][inputs[3][:, 1] < .185, 1] = 1
+                        inputs[3][inputs[3][:, 1] < 1, 1] = 0
 
                     if not config.use_tau:
                         inputs[3] = inputs[3][:, 0].long()*3 + inputs[3][:, 1].long()
@@ -254,7 +255,8 @@ if __name__ == '__main__':
     parser.add_argument('-l_two', '--l2_norm', default=0.002, type=float, help='l2 norm constant')
     parser.add_argument('-opt', '--optimizer', default='adam', help='Optimizer, currently options are "adam" and "novograd"')
     parser.add_argument('-si', '--sim', default=False, dest='sim', action='store_true', help='Flag indicating data is from 2d sim')
-    parser.add_argument('-u', '--use_tau', default=True, dest='sim', action='store_false', help='Flag indicating not to use tau')
+    parser.add_argument('-u', '--use_tau', default=True, dest='use_tau', action='store_false', help='Flag indicating not to use tau')
+    parser.add_argument('-at', '--abstract_tau', default=False, dest='abstract_tau', action='store_true', help='Flag indicating not to use tau')
     args = parser.parse_args()
 
     device = None
