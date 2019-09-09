@@ -167,7 +167,7 @@ def train(config):
                         targets[1][:, 3:] = 0
 
                     if config.zero_eof:
-                        inputs[2][:, 3:] = 0   # No trajectory info from eof
+                        inputs[2][:, :-3] = 0   # No trajectory info from eof
 
                     if config.abstract_tau:
                         inputs[3][inputs[3][:, 0] < .455, 0] = 2
@@ -239,7 +239,7 @@ if __name__ == '__main__':
     parser.add_argument('-ne', '--num_epochs', default=1000, type=int, help='Number of epochs')
     parser.add_argument('-bs', '--batch_size', default=64, type=int, help='Batch Size')
     parser.add_argument('-sc', '--scale', default=1, type=float, help='Scaling factor for non-image data')
-    parser.add_argument('-lr', '--learning_rate', default=0.0001, type=float, help='Learning Rate')
+    parser.add_argument('-lr', '--learning_rate', default=0.0005, type=float, help='Learning Rate')
     parser.add_argument('-device', '--device', default="cuda:0", type=str, help='The cuda device')
     parser.add_argument('-ub', '--use_bias', default=False, dest='use_bias', action='store_true', help='Flag to include biases in layers')
     parser.add_argument('-zf', '--zero_eof', default=False, dest='zero_eof', action='store_true', help='Flag to only use current position in eof')
