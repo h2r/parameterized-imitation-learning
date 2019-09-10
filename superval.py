@@ -297,7 +297,7 @@ if __name__ == '__main__':
     h = config.dest_dir
     taus = ['onehot', 'tau']
 
-    for num_buttons in range(1,6):
+    for num_buttons in range(1,10):
         for arrangement in arrange(num_buttons, config.max_arrangements):
             for use_tau in [0, 1]:
                 print_open_fds(True)
