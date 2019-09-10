@@ -167,14 +167,15 @@ def train(config):
                         targets[1][:, 3:] = 0
 
                     if config.zero_eof:
-                        inputs[2][:, 3:] = 0   # No trajectory info from eof
+                        inputs[2][:, :-3] = 0   # No trajectory info from eof
 
-                    inputs[3][inputs[3][:, 0] < .455, 0] = 2
-                    inputs[3][inputs[3][:, 0] < .525, 0] = 1
-                    inputs[3][inputs[3][:, 0] < 1, 0] = 0
-                    inputs[3][inputs[3][:, 1] < .115, 1] = 2
-                    inputs[3][inputs[3][:, 1] < .185, 1] = 1
-                    inputs[3][inputs[3][:, 1] < 1, 1] = 0
+                    if config.abstract_tau:
+                        inputs[3][inputs[3][:, 0] < .455, 0] = 2
+                        inputs[3][inputs[3][:, 0] < .525, 0] = 1
+                        inputs[3][inputs[3][:, 0] < 1, 0] = 0
+                        inputs[3][inputs[3][:, 1] < .115, 1] = 2
+                        inputs[3][inputs[3][:, 1] < .185, 1] = 1
+                        inputs[3][inputs[3][:, 1] < 1, 1] = 0
 
                     if not config.use_tau:
                         inputs[3] = inputs[3][:, 0].long()*3 + inputs[3][:, 1].long()
@@ -238,7 +239,7 @@ if __name__ == '__main__':
     parser.add_argument('-ne', '--num_epochs', default=1000, type=int, help='Number of epochs')
     parser.add_argument('-bs', '--batch_size', default=64, type=int, help='Batch Size')
     parser.add_argument('-sc', '--scale', default=1, type=float, help='Scaling factor for non-image data')
-    parser.add_argument('-lr', '--learning_rate', default=0.0001, type=float, help='Learning Rate')
+    parser.add_argument('-lr', '--learning_rate', default=0.0005, type=float, help='Learning Rate')
     parser.add_argument('-device', '--device', default="cuda:0", type=str, help='The cuda device')
     parser.add_argument('-ub', '--use_bias', default=False, dest='use_bias', action='store_true', help='Flag to include biases in layers')
     parser.add_argument('-zf', '--zero_eof', default=False, dest='zero_eof', action='store_true', help='Flag to only use current position in eof')
@@ -254,7 +255,8 @@ if __name__ == '__main__':
     parser.add_argument('-l_two', '--l2_norm', default=0.002, type=float, help='l2 norm constant')
     parser.add_argument('-opt', '--optimizer', default='adam', help='Optimizer, currently options are "adam" and "novograd"')
     parser.add_argument('-si', '--sim', default=False, dest='sim', action='store_true', help='Flag indicating data is from 2d sim')
-    parser.add_argument('-u', '--use_tau', default=True, dest='sim', action='store_false', help='Flag indicating not to use tau')
+    parser.add_argument('-u', '--use_tau', default=True, dest='use_tau', action='store_false', help='Flag indicating not to use tau')
+    parser.add_argument('-at', '--abstract_tau', default=False, dest='abstract_tau', action='store_true', help='Flag indicating not to use tau')
     args = parser.parse_args()
 
     device = None

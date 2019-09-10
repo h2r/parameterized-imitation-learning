@@ -55,7 +55,7 @@ class Config:
 
 
 def arrange(num_but, max_arr):
-    arrangements = list(combinations(ALL_CASES, num_but))
+    arrangements = sorted(list(combinations(ALL_CASES, num_but)))
     return sample(arrangements, min(len(arrangements), max_arr))
 
 
@@ -240,6 +240,7 @@ if __name__ == '__main__':
     config.optimizer        = args.optimizer
     config.sim              = args.sim
     config.zero_eof         = args.zero_eof
+    config.abstract_tau     = True
 
     if config.sim:
         config.eof_size = 15
@@ -331,3 +332,4 @@ if __name__ == '__main__':
                 # eval
                 if config.sim:
                     evaluate(config)
+    rmtree(config.dest_dir)
