@@ -18,7 +18,6 @@ splits = {}
 num_of_train = 0
 num_of_test = 0
 
-
 def preprocess_image(path, crop_right=586, crop_lower=386):
     with Image.open(path) as img:
         # Crop
@@ -100,17 +99,21 @@ def parse_trajectory(ins):
             pics.remove('.DS_Store')
         pics = sorted(pics, key=cmp_to_key(compare_names))
 
+        if len(pics) == 0:
+            return "empty trajectory"
+
         vectors = pd.read_csv(root+"/vectors.txt", header=-1)
         last = vectors.iloc[-1]
         if config.simulation:
             # FOR SIM
-            tau = [last.iloc[i] for i in range(15, len(last) - 2)]
-            aux_target = [last.iloc[i] for i in range(len(last) - 2, len(last))]
+            tau = [last.iloc[i] for i in range(15, len(last) - 3)]
+            aux_target = [last.iloc[i] for i in range(len(last) - 3, len(last))]
         else:
             # FOR KUKA
             tau = [last.iloc[1], last.iloc[2], last.iloc[3]]
             aux_target = [last.iloc[1], last.iloc[2], last.iloc[3],
                           last.iloc[4], last.iloc[5], last.iloc[6]]
+
         # The length of the history will be 5
         for i in range(0, len(pics), 2):
             # rgb, depth
@@ -126,15 +129,15 @@ def parse_trajectory(ins):
                 a += '======='
                 return a
 
-            if i == 0:
-                prevs = [curr_idx for _ in range(5)]
+            if curr_idx < 5:
+                prevs = [0]*(5-curr_idx) + list(range(curr_idx))
             else:
                 prevs.pop(0)
-                prevs.append(curr_idx)
+                prevs.append(curr_idx-1)
             eof = []
             for prev in prevs:
                 pos = [float(vectors[vectors[0]==prev][j]) for j in range(1,4)]
-                eof = pos + eof
+                eof = eof + pos
             # EOF: 2:17
             row += eof
             # Tau: 17:20
@@ -169,14 +172,10 @@ def extract_number(name):
     numbers = re.findall('\d+', name)
     return int(numbers[0])
 
+'''
 def clean_datapoint(sub_dir, data_file_name='/vectors.txt', clean_file_name='/clean_vector.txt'):
     for root, _, file in os.walk(sub_dir):
         file = sorted(file)
-        dirty_flag = False
-        for element in file:
-            if element[0:2] == "0_" or element[0:2] == "1_" or element[0:2] == "2_" or element[0:2] == "3_" or element[0:2] == "4_":
-                os.remove(root+"/"+element)
-                dirty_flag = True
         if dirty_flag:
             vector_file = root+data_file_name
             clean_file = root+clean_file_name
@@ -187,8 +186,10 @@ def clean_datapoint(sub_dir, data_file_name='/vectors.txt', clean_file_name='/cl
                         writer.writerow(row)
             os.remove(vector_file)
             os.rename(root+clean_file_name, root+data_file_name)
+'''
 
 def clean_kuka_data(root_dir, cases, data_file_name='/vectors.txt', clean_file_name='/clean_vector.txt'):
+    '''
     print("Cleaning Kuka Data")
     with Pool(processes=6) as pool:
         dirs = []
@@ -196,6 +197,7 @@ def clean_kuka_data(root_dir, cases, data_file_name='/vectors.txt', clean_file_n
             dirs += [x[0] for x in os.walk(root_dir + case)][1:]
         for result in tqdm.tqdm(pool.imap_unordered(clean_datapoint, dirs, chunksize=16), desc='Cleaning sub-directories', total=len(dirs)):
             pass
+    '''
     preprocess_images(root_dir, cases)
 
 def serialize_pyarrow(obj):
@@ -221,8 +223,8 @@ def get_row(ins):
     eof = np.array([float(x) for x in row[2:17]])
     if config.simulation:
         rl = len(row)
-        tau = np.array([float(x) for x in row[17:rl-9]])
-        aux = np.array([float(x) for x in row[rl-9:rl-7]])
+        tau = np.array([float(x) for x in row[17:rl-10]])
+        aux = np.array([float(x) for x in row[rl-10:rl-7]])
         target = np.array([float(x) for x in row[rl-7:rl]])
     else:
         tau = np.array([float(x) for x in row[17:20]])

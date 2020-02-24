@@ -8,14 +8,14 @@ import argparse
 from pygame.locals import *
 from PIL import Image
 import numpy as np
+import matplotlib.pyplot as plt
 import itertools
 from src.model import Model
 import torch
-from simulation.sim import get_start
+from simulation.sim import get_start, get_tau, RECT_X, RECT_Y, goals_x, goals_y, goal_pos
 
 # note we want tau to be col, row == x, y
 # This is like the get goal method
-
 def get_tau_():
     button = input('Please enter a button for the robot to try to press (e.g. "00", "12"): ')
     return [int(b) for b in button]
@@ -28,39 +28,30 @@ def distance(a, b):
     return np.sqrt(dist)
 
 
-def get_tau(goal_x, goal_y, options):
-    return options[goal_x][goal_y]
-
-
 def process_images(np_array_img, is_it_rgb):
+    #try:
     img = 2*((np_array_img - np.amin(np_array_img))/(np.amax(np_array_img)-np.amin(np_array_img))) - 1
+    #except:
+    #    img = np.zeros_like(np_array_img)
     img = torch.from_numpy(img).type(torch.FloatTensor).squeeze()
     if(is_it_rgb):
-        img = img.permute(2, 0, 1).unsqueeze(0)
+        img = img.permute(2, 0, 1)
     else:
-        img = img.view(1,1,img.shape[0], img.shape[1])
-    return img
+        img = img.view(1, img.shape[0], img.shape[1])
+    return img.unsqueeze(0)
 
 def sim(model, config):
-    goals_x = list(range(3))
-    goals_y = list(range(3))
-
-    goal_pos = [[(200, 150), (200, 300), (200, 450)],
-                [(400, 150), (400, 300), (400, 450)],
-                [(600, 150), (600, 300), (600, 450)]]
-    #goal_pos = [[(int(np.random.rand()*720)+40, int(np.random.rand()*520)+40) for j in goals_y] for i in goals_x]
-    #goal_pos = [[(int((i+1)*800/(len(goals_x)+1)) - 100, int((j+1)*600/(len(goals_y)+1)) + 35) for j in goals_y] for i in goals_x]
 
     tau_opts = [[(0, 0), (0, 1), (0, 2)],
                 [(1, 0), (1, 1), (1, 2)],
                 [(2, 0), (2, 1), (2, 2)]]
 
-    tau_opts = goal_pos
+    #tau_opts = [[(1,0), (2,0), (3,0)],
+    #          [(3,1), (1,1), (2,1)],
+    #          [(2,2), (3,2), (1,2)]]
 
 
     # These are magic numbers
-    RECT_X = 60
-    RECT_Y = 60
     SPACEBAR_KEY = 32 # pygame logic
     S_KEY = pygame.K_s
     R_KEY = pygame.K_r
@@ -91,7 +82,16 @@ def sim(model, config):
 
     gx, gy = get_tau_()#np.random.randint(0, 3, (2,))
     #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
-    tau = get_tau(gx, gy, goal_pos)
+    tau = get_tau(gx, gy, tau_opts)#(gx, gy)
+    if args.rotation:
+        rect_rot = np.ones(9) * 90
+    else:
+        rect_rot = np.random.randint(0,180, (9,))
+    x_offset = np.random.randint(0, 200)
+    y_offset = np.random.randint(0, 200)
+    _gx, _gy = get_tau(gx, gy, goal_pos)
+    _gx += x_offset
+    _gy += y_offset
     a = 0
     while run:
         a += 1
@@ -122,8 +122,8 @@ def sim(model, config):
         vanilla_depth = Image.fromarray(np.uint8(np.zeros((120,160))))
         depth = process_images(vanilla_depth, False).zero_()
 
-        div = [200, 175] if config.normalize else [1, 1]
-        sub = [400, 325] if config.normalize else [0, 0]
+        div = [400, 300] if config.normalize else [1, 1]
+        sub = [400, 300] if config.normalize else [0, 0]
         norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1]]
         if eof is None:
             eof = torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0] * 5)
@@ -132,17 +132,17 @@ def sim(model, config):
 
         # Calculate the trajectory
         in_tau = torch.FloatTensor(tau)
-        #in_tau = torch.zeros(1)
-        #in_tau[0] = tau[0]*3 + tau[1]
-        out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof))
+        print_loc = 'eval_print/' + str(a)
+        out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof), b_print=config.print, print_path=print_loc)
         out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
-        new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y]
+        delta_rot = out[2].item()
+        new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y, curr_pos[2] + delta_rot]
         print(eof)
         print(tau)
         print(aux)
-        #print(get_tau(gx, gy, goal_pos))
+        print((_gx, _gy))
         print(out)
         print(new_pos)
         print(distance(curr_pos, new_pos))
@@ -152,12 +152,25 @@ def sim(model, config):
         curr_pos = new_pos
 
         screen.fill((211,211,211))
+        #for obstacle in obstacles:
+        #    pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(*obstacle))
         for x, y in list(itertools.product(goals_x, goals_y)):
-            color = tau_opts[x,y] if config.color else (0, 0, 255)
-            #if x == gx and y == gy:
-            #    continue
-            pygame.draw.rect(screen, color, pygame.Rect(goal_pos[x][y][0]-RECT_X/2, goal_pos[x][y][1]-RECT_Y/2, RECT_X, RECT_Y))
-        pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
+            color = tau_opts[x, y] if config.color else (0, 0, 255)
+            #surf = pygame.Surface((RECT_X, RECT_Y), pygame.SRCALPHA)
+            #surf.fill(color)
+            #surf = pygame.transform.rotate(surf, rect_rot[3*x+y])
+            #surf.convert()
+            #screen.blit(surf, (goal_pos[x][y][0] + x_offset, goal_pos[x][y][1] + y_offset))
+            pygame.draw.rect(screen, color, pygame.Rect(goal_pos[x][y][0]-RECT_X/2 + x_offset, goal_pos[x][y][1]-RECT_Y/2 + y_offset, RECT_X, RECT_Y))
+            pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(goal_pos[x][y][0]-RECT_X/4 + x_offset, goal_pos[x][y][1]-RECT_Y/4 + y_offset, RECT_X/2, RECT_Y/2))
+            pygame.draw.rect(screen, (0, 255, 0), pygame.Rect(goal_pos[x][y][0]-RECT_X/8 + x_offset, goal_pos[x][y][1]-RECT_Y/8 + y_offset, RECT_X/4, RECT_Y/4))
+        #surf = pygame.Surface((RECT_X, RECT_Y), pygame.SRCALPHA)
+        #surf.fill((0,0,0))
+        #surf = pygame.transform.rotate(surf, int(curr_pos[2]))
+        #surf = pygame.transform.rotate(surf, 90)
+        #surf.convert()
+        #screen.blit(surf, curr_pos[:2])
+        pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos[:2]], 20, 0)
         pygame.display.update()
 
         #if a == 200:
@@ -171,6 +184,8 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--color', dest='color', default=False, action='store_true', help='Used to activate color simulation.')
     parser.add_argument('-no', '--normalize', dest='normalize', default=False, action='store_true', help='Used to activate position normalization.')
     parser.add_argument('-f', '--framerate', default=300, type=int, help='Framerate of simulation.')
+    parser.add_argument('-r', '--rotation', default=True, dest='rotation', action='store_false', help='Used to eval rotation.')
+    parser.add_argument('-p', '--print', default=False, dest='print', action='store_true', help='Flag to print activations.')
     args = parser.parse_args()
 
     checkpoint = torch.load(args.weights, map_location='cpu')

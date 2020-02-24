@@ -14,6 +14,7 @@ from random import sample
 from itertools import combinations
 
 # Should clean these up
+from matplotlib import pyplot as plt
 import torch
 import os
 import sys
@@ -27,11 +28,6 @@ import numpy as np
 import itertools
 import torch
 import inspect
-
-
-ALL_CASES = ['00', '01', '02',
-             '10', '11', '12',
-             '20', '21', '22']
 
 descriptors = set()
 def print_open_fds(print_all=False):
@@ -54,8 +50,8 @@ class Config:
     pass
 
 
-def arrange(num_but, max_arr):
-    arrangements = sorted(list(combinations(ALL_CASES, num_but)))
+def arrange(num_but, max_arr, all_goals):
+    arrangements = sorted(list(combinations([str(goal[0]) + str(goal[1]) for goal in all_goals], num_but)))
     return sample(arrangements, min(len(arrangements), max_arr))
 
 
@@ -79,9 +75,12 @@ def evaluate(config):
                 [(400, 150), (400, 300), (400, 450)],
                 [(600, 150), (600, 300), (600, 450)]]
 
-    tau_opts = [[(0, 0), (0, 1), (0, 2)],
-                [(1, 0), (1, 1), (1, 2)],
-                [(2, 0), (2, 1), (2, 2)]]
+    if config.abstract_tau:
+        tau_opts = [[(0, 0), (0, 1), (0, 2)],
+                    [(1, 0), (1, 1), (1, 2)],
+                    [(2, 0), (2, 1), (2, 2)]]
+    else:
+        tau_opts = goal_pos
 
     # These are magic numbers
     RECT_X = 60
@@ -111,11 +110,17 @@ def evaluate(config):
         for c in range(3):
             gx = c
             gy = r
-            tau = get_tau(gx, gy, tau_opts)
             trials = torch.zeros(config.eval_traj)
             print('Evaluating button %d, %d' % (gx, gy))
+            #print('Tau = ' + str(tau))
 
             for i in range(config.eval_traj):
+                tau_opts = np.random.randint(0, 255, (3,3,3))
+                tau = get_tau(gx, gy, tau_opts)
+                x_offset = np.random.randint(-160, 160)
+                y_offset = np.random.randint(-120, 120)
+                #if not config.use_tau:
+                #    tau = [tau[0]+x_offset, tau[1]+y_offset]
                 # Set the cursor
                 curr_pos = get_start()
 
@@ -150,7 +155,10 @@ def evaluate(config):
                     if eof is None:
                         eof = torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0] * 5)
                     else:
-                        eof = torch.cat([torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0]), eof[0:12]])
+                        eof = torch.cat([eof[3:], torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0])])
+
+                    if config.zero_eof:
+                        eof[:-3] = 0   # No trajectory info from eof
 
                     # Calculate the trajectory
                     if config.use_tau:
@@ -160,7 +168,35 @@ def evaluate(config):
                     else:
                         in_tau = torch.LongTensor([tau[0]*3 + tau[1]])
 
+                    aux_in = torch.FloatTensor([(goal_pos[gx][gy][0] + x_offset)/400 - 1, (goal_pos[gx][gy][1] + y_offset)/300 - 1])
+
                     out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1))
+
+                    '''
+                    if run == 2:
+                        rgb = rgb.squeeze().permute(1, 2, 0)
+                        print(rgb.min(), rgb.max())
+
+                        depth = depth.squeeze()
+                        print(depth.min(), depth.max())
+
+                        print('EOF: %s' % eof.squeeze())
+                        print('TAU: %s' % in_tau.squeeze())
+
+                        if model is not None:
+                            print('Model out: %s' % out.squeeze())
+                            print('Model aux: %s' % aux.squeeze())
+
+                        plt.figure(1)
+                        plt.imshow((rgb - rgb.min()) / (rgb.max() - rgb.min() + 1e-6))
+
+                        plt.figure(2)
+                        plt.imshow((depth - depth.min()) / (depth.max() - depth.min() + 1e-6))
+                        plt.show()
+
+                        print('==========================')
+                    '''
+
                     out = out.squeeze()
                     delta_x = out[0].item()
                     delta_y = out[1].item()
@@ -169,7 +205,10 @@ def evaluate(config):
                     if (new_pos[0] < 0) or (new_pos[0] > 800) or (new_pos[1] < 0) or (new_pos[1] > 600)\
                     or (distance(new_pos, curr_pos) < config.stop_tolerance)\
                     or (run == config.max_iters): # Is it out of bounds / stopped / out of time
-                        trials[i] = 1 if distance(new_pos, goal_pos[gx][gy]) < 55 else 0# Is it on the button
+                        #print('%.2f     %.2f \r' % (aux[0,0].item(),aux[0,1].item()))
+                        #pygame.image.save(screen, config.save_path+str(i)+"_rgb.png")
+                        gp = goal_pos[gx][gy]
+                        trials[i] = 1 if distance(new_pos, [gp[0]+x_offset, gp[1]+y_offset]) < 55 else 0# Is it on the button
                         break
 
                     curr_pos = new_pos
@@ -177,8 +216,11 @@ def evaluate(config):
 
                     screen.fill((211,211,211))
                     for x, y in list(itertools.product(goals_x, goals_y)):
-                        color = tau_opts[x,y] if config.color else (0, 0, 255)
-                        pygame.draw.rect(screen, color, pygame.Rect(goal_pos[x][y][0]-RECT_X/2, goal_pos[x][y][1]-RECT_Y/2, RECT_X, RECT_Y))
+                        #if (x == gx) and (y == gy):
+                        color = tau_opts[x, y] if config.color else (0, 0, 255)
+                        pygame.draw.rect(screen, color, pygame.Rect(goal_pos[x][y][0]-RECT_X/2 + x_offset, goal_pos[x][y][1]-RECT_Y/2 + y_offset, RECT_X, RECT_Y))
+                        #pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(goal_pos[x][y][0]-RECT_X/4 + x_offset, goal_pos[x][y][1]-RECT_Y/4 + y_offset, RECT_X/2, RECT_Y/2))
+                        #pygame.draw.rect(screen, (0, 255, 0), pygame.Rect(goal_pos[x][y][0]-RECT_X/8 + x_offset, goal_pos[x][y][1]-RECT_Y/8 + y_offset, RECT_X/4, RECT_Y/4))
                     pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos], 20, 0)
                     pygame.display.update()
 
@@ -199,7 +241,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--out_root', required=True, help='Path to folder containing outputs')
     parser.add_argument('-n', '--num_epochs', default=100, type=int, help='Number of epochs per train')
     parser.add_argument('-b', '--batch_size', default=64, type=int, help='Batch Size')
-    parser.add_argument('-lr', '--learning_rate', default=0.0005, type=float, help='Learning Rate')
+    parser.add_argument('-lr', '--learning_rate', default=0.001, type=float, help='Learning Rate')
     parser.add_argument('-de', '--device', default="cuda:0", type=str, help='The cuda device')
     parser.add_argument('-m', '--max_arrangements', default=10, type=int, help='Number of arrangements per button count')
     parser.add_argument('-s', '--scale', default=1, type=float, help='Scaling factor for non-image data')
@@ -217,12 +259,14 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--framerate', default=1000, type=int, help='(Max) framerate of simulation.')
     parser.add_argument('-st', '--stop_tolerance', default=.001, type=float, help='Movement speed threshold to be considered stopped.')
     parser.add_argument('-mi', '--max_iters', default=100, type=int, help='Max eval iterations per trajectory.')
+    parser.add_argument('-at', '--abstract_tau', default=False, dest='abstract_tau', action='store_true', help='Flag indicating not to use tau')
+    parser.add_argument('-c', '--color', default=False, dest='color', action='store_true', help='Flag indicating not to use tau')
     args = parser.parse_args()
 
     config = Config
 
     # Train params
-    config.root_dir         = args.data_root + '/'
+    config.root_dir         = args.data_root + '/data/raw/'
     config.data_file        = args.data_file
     config.out_root         = args.out_root
     config.num_epochs       = args.num_epochs
@@ -240,11 +284,15 @@ if __name__ == '__main__':
     config.optimizer        = args.optimizer
     config.sim              = args.sim
     config.zero_eof         = args.zero_eof
-    config.abstract_tau     = True
+    config.abstract_tau     = args.abstract_tau
+    config.color            = args.color
 
     if config.sim:
+        if config.color:
+            config.tau_size = 3
+        else:
+            config.tau_size = 2
         config.eof_size = 15
-        config.tau_size = 2
         config.aux_size = 2
         config.out_size = 7
     else:
@@ -267,7 +315,6 @@ if __name__ == '__main__':
     config.max_traj     = args.num_traj
 
     # Data gathering params
-    config.color       = False
     config.normalize   = False
     config.num_traj    = args.num_traj
     config.framerate   = args.framerate
@@ -277,20 +324,24 @@ if __name__ == '__main__':
     config.eval_traj      = args.eval_traj
     config.stop_tolerance = args.stop_tolerance
     config.max_iters      = args.max_iters
+    config.use_tau        = True
 
+    goals_x = [0, 1, 2]
+    goals_y = [0, 1, 2]
+    all_goals = list(itertools.product(goals_x, goals_y))#[(0, 0)]#
     try:
         assert(os.path.exists(config.root_dir))
-        for x, y in list(itertools.product([0, 1, 2], [0, 1, 2])):
+        for x, y in all_goals:
             assert(os.path.exists(config.root_dir + str(x) + str(y)))
     except AssertionError:
         if config.sim:
             makedirs(config.root_dir)
-            for x, y in list(itertools.product([0, 1, 2], [0, 1, 2])):
+            for x, y in all_goals:
                 if sim(x, y, str(x)+str(y), config):
                     raise Exception('You exited the data gathering!!')
 
             ("Cleaning Data...")
-            clean_kuka_data(config.root_dir, ALL_CASES)
+            clean_kuka_data(config.root_dir, [str(x) + str(y) for x,y in all_goals])
 
     makedirs(config.dest_dir)
     makedirs(config.out_root)
@@ -298,16 +349,17 @@ if __name__ == '__main__':
     h = config.dest_dir
     taus = ['onehot', 'tau']
 
-    for num_buttons in range(8,9):
-        for arrangement in arrange(num_buttons, config.max_arrangements):
-            for use_tau in [0, 1]:
-                print_open_fds(True)
+    for num_buttons in range(1,10):
+        for arrangement in arrange(num_buttons, config.max_arrangements, all_goals):
+            print('Running following subset: ' + str(arrangement))
+            for use_tau in [1]:
+                #print_open_fds(True)
                 config.save_path   = config.out_root + '/' + taus[use_tau] + '/' + str(num_buttons) + '/' + str(arrangement)
                 config.use_tau     = use_tau
                 config.train_cases = arrangement
                 config.weights     = config.save_path + '/best_checkpoint.tar'
 
-                makedirs(config.save_path)
+                #makedirs(config.save_path)
 
                 ##
                 '''
