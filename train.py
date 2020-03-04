@@ -122,9 +122,13 @@ class Novograd(Optimizer):
 
 def train(config):
     modes = ['train', 'test']
+    datasets = {mode: ImitationLMDB(config.data_file, mode) for mode in modes}
+    sizer = datasets['test'][0]
     # Define model, dataset, dataloader, loss, optimizer
-    kwargs = {'use_bias':config.use_bias, 'use_tau':config.use_tau, 'eof_size':config.eof_size, 'tau_size':config.tau_size, 'aux_size':config.aux_size, 'out_size':config.out_size}
+    kwargs = {'use_bias':not config.use_bias, 'use_tau':config.use_tau, 'eof_size':sizer[2].shape[0], 'tau_size':sizer[3].shape[0], 'aux_size':sizer[5].shape[0], 'out_size':sizer[4].shape[0]}
+    print(kwargs)
     model = Model(**kwargs).to(config.device)
+    sizer = None
     try:
         os.makedirs(config.save_path)
     except:
@@ -151,15 +155,16 @@ def train(config):
     with open(config.save_path+"/costs.txt", cost_file) as cost_file:
         gradients = torch.zeros((100, 2))
 
-        datasets = {mode: ImitationLMDB(config.data_file, mode) for mode in modes}
         for epoch in tqdm.trange(1, config.num_epochs+1, desc='Epochs'):
 
             #if epoch == 1:
             #    print(datasets['train'][0][3])
+            datasets = {mode: ImitationLMDB(config.data_file, mode) for mode in modes}
             dataloaders = {mode: DataLoader(datasets[mode], batch_size=config.batch_size, shuffle=True, num_workers=8, pin_memory=True) for mode in modes}
             data_sizes = {mode: len(datasets[mode]) for mode in modes}
             for mode in modes:
                 running_loss = 0.0
+                flag = True
                 for data in tqdm.tqdm(dataloaders[mode], desc='{}:{}/{}'.format(mode, epoch, config.num_epochs),ascii=True):
                     inputs = data[:-2]
                     targets = data[-2:]
@@ -197,8 +202,6 @@ def train(config):
                         inputs[3][inputs[3][:, 1] < .185, 1] = 95
                         inputs[3][inputs[3][:, 1] < 1, 1] = 127
                         '''
-                    elif config.sim:
-                        inputs[3] = targets[1][:,:2]
 
                     if not config.use_tau:
                         inputs[3] = inputs[3][:, 0].long()*3 + inputs[3][:, 1].long()
@@ -259,8 +262,9 @@ def train(config):
                             model.eval()
                             with torch.no_grad():
                                 out, aux_out = model(inputs[0], inputs[1], inputs[2] * config.scale, inputs[3] * config.scale, aux_in=aux_in)
-                                loss = criterion(out, aux_out, targets[0] * config.scale, targets[1] * config.scale)
+                                loss = criterion(out, aux_out, targets[0] * config.scale, targets[1] * config.scale, flag)
                                 running_loss += loss.item()#*curr_bs)
+                    flag = False
                 cost = running_loss/data_sizes[mode]
                 cost_file.write(str(epoch)+","+mode+","+str(cost)+"\n")
                 if mode == 'test':
@@ -296,7 +300,7 @@ if __name__ == '__main__':
     parser.add_argument('-sc', '--scale', default=1, type=float, help='Scaling factor for non-image data')
     parser.add_argument('-lr', '--learning_rate', default=0.0005, type=float, help='Learning Rate')
     parser.add_argument('-device', '--device', default="cuda:0", type=str, help='The cuda device')
-    parser.add_argument('-ub', '--use_bias', default=False, dest='use_bias', action='store_true', help='Flag to include biases in layers')
+    parser.add_argument('-dub', '--use_bias', default=False, dest='use_bias', action='store_true', help='Flag to include biases in layers')
     parser.add_argument('-zf', '--zero_eof', default=False, dest='zero_eof', action='store_true', help='Flag to only use current position in eof')
     parser.add_argument('-l1', '--lambda_l1', default=1, type=float, help='l1 loss weight')
     parser.add_argument('-l2', '--lambda_l2', default=.01, type=float, help='l2 loss weight')

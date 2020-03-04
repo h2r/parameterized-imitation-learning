@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 from src.model import Model
+from src.loss_func import fix_rot
 import torch
 from simulation.sim import get_start, get_tau, RECT_X, RECT_Y, goals_x, goals_y, goal_pos
 
@@ -84,9 +85,10 @@ def sim(model, config):
     #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
     tau = get_tau(gx, gy, tau_opts)#(gx, gy)
     if args.rotation:
-        rect_rot = np.ones(9) * 90
+    #    rect_rot = np.ones(9) * 90
+        rect_rot = np.random.randint(0,360, (9,))
     else:
-        rect_rot = np.random.randint(0,180, (9,))
+        rect_rot = np.random.randint(0,360, (9,))
     x_offset = np.random.randint(0, 200)
     y_offset = np.random.randint(0, 200)
     _gx, _gy = get_tau(gx, gy, goal_pos)
@@ -103,6 +105,7 @@ def sim(model, config):
             if event.type == pygame.KEYUP:
                 if event.key == S_KEY:
                     curr_pos = get_start()
+                    #curr_pos[2] = np.random.randint(0, 360)
                 if event.key == R_KEY:
                     gx, gy = get_tau_()#np.random.randint(0, 3, (2,))
                     #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
@@ -122,13 +125,13 @@ def sim(model, config):
         vanilla_depth = Image.fromarray(np.uint8(np.zeros((120,160))))
         depth = process_images(vanilla_depth, False).zero_()
 
-        div = [400, 300] if config.normalize else [1, 1]
-        sub = [400, 300] if config.normalize else [0, 0]
-        norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1]]
+        div = [400, 300, 180] if config.normalize else [1, 1]
+        sub = [400, 300, 180] if config.normalize else [0, 0]
+        norm_pos = [(curr_pos[i] - sub[i]) / div[i] for i in range(3)]
         if eof is None:
-            eof = torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0] * 5)
+            eof = torch.FloatTensor(norm_pos * 5)
         else:
-            eof = torch.cat([torch.FloatTensor([norm_pos[0], norm_pos[1], 0.0]), eof[0:12]])
+            eof = torch.cat([torch.FloatTensor(norm_pos), eof[0:12]])
 
         # Calculate the trajectory
         in_tau = torch.FloatTensor(tau)
@@ -137,21 +140,41 @@ def sim(model, config):
         out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
-        delta_rot = out[2].item()
-        new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y, curr_pos[2] + delta_rot]
-        print(eof)
-        print(tau)
-        print(aux)
-        print((_gx, _gy))
-        print(out)
-        print(new_pos)
-        print(distance(curr_pos, new_pos))
+        sin_cos = out[2:4]
+        mag = torch.sqrt(sin_cos[0]**2 + sin_cos[1]**2)
+        sin_cos = sin_cos / mag
+        delta_rot = (torch.atan2(sin_cos[0], sin_cos[1]).item() / 3.14159) * 180
+        new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y, (curr_pos[2] + delta_rot) % 360]
+        sin_cos = aux.squeeze()[2:4]
+        mag = torch.sqrt(sin_cos[0]**2 + sin_cos[1]**2)
+        sin_cos = sin_cos / mag
+        aux_rot = (torch.atan2(sin_cos[0] , sin_cos[1]).view(-1, 1) / 3.14159) - 1
+
+        print(eof.numpy())
+        print(delta_rot)
+        print([-1*np.sin(new_pos[2] / 180 * 3.14159), -1*np.cos(new_pos[2] / 180 * 3.14159)])
+        print(-1*aux)
+        # print([-1*np.sin(rect_rot[3*gx+gy] / 180 * 3.14159), -1*np.cos(rect_rot[3*gx+gy] / 180 * 3.14159)])
+        # print(fix_rot(torch.FloatTensor([rect_rot[3*gx+gy] / 180 - 1]).view(-1, 1), aux_rot))
+        # print(fix_rot(torch.FloatTensor([rect_rot[3*gx+gy] / 180 - 1]).view(-1, 1), torch.FloatTensor([new_pos[2]/180 - 1]).view(-1, 1)))
+        # print(fix_rot(torch.FloatTensor([new_pos[2]/180 - 1]).view(-1, 1), aux_rot))
+        # print(eof)
+        # print(tau)
+        # print(aux)
+        # print((_gx, _gy))
+        # print(out)
+        # print(new_pos)
+        # print(distance(curr_pos, new_pos))
         #if (distance(curr_pos, new_pos)) < 1.5:
         #    time.sleep(5)
         print('========')
         curr_pos = new_pos
 
         screen.fill((211,211,211))
+
+        surf2 = pygame.Surface((RECT_Y-10, RECT_Y-10), pygame.SRCALPHA)
+        surf2.fill((0, 255, 0))
+
         #for obstacle in obstacles:
         #    pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(*obstacle))
         for x, y in list(itertools.product(goals_x, goals_y)):
@@ -161,16 +184,39 @@ def sim(model, config):
             #surf = pygame.transform.rotate(surf, rect_rot[3*x+y])
             #surf.convert()
             #screen.blit(surf, (goal_pos[x][y][0] + x_offset, goal_pos[x][y][1] + y_offset))
-            pygame.draw.rect(screen, color, pygame.Rect(goal_pos[x][y][0]-RECT_X/2 + x_offset, goal_pos[x][y][1]-RECT_Y/2 + y_offset, RECT_X, RECT_Y))
-            pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(goal_pos[x][y][0]-RECT_X/4 + x_offset, goal_pos[x][y][1]-RECT_Y/4 + y_offset, RECT_X/2, RECT_Y/2))
-            pygame.draw.rect(screen, (0, 255, 0), pygame.Rect(goal_pos[x][y][0]-RECT_X/8 + x_offset, goal_pos[x][y][1]-RECT_Y/8 + y_offset, RECT_X/4, RECT_Y/4))
+
+            color = tau_opts[x, y] if config.color else (0, 0, 255)
+            #surf = pygame.Surface()
+            surf = pygame.Surface((RECT_X, RECT_Y), pygame.SRCALPHA)
+            surf.fill(color)
+            surf.blit(surf2, (5, 5))
+            surf = pygame.transform.rotate(surf, rect_rot[3*x+y])
+            surf.convert()
+            screen.blit(surf, (goal_pos[x][y][0] + x_offset, goal_pos[x][y][1] + y_offset))
+
+            # THIS IS THE OLD CODE FOR MULTICOLOR SQUARES
+            # pygame.draw.rect(screen, color, pygame.Rect(goal_pos[x][y][0]-RECT_X/2 + x_offset, goal_pos[x][y][1]-RECT_Y/2 + y_offset, RECT_X, RECT_Y))
+            # pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(goal_pos[x][y][0]-RECT_X/4 + x_offset, goal_pos[x][y][1]-RECT_Y/4 + y_offset, RECT_X/2, RECT_Y/2))
+            # pygame.draw.rect(screen, (0, 255, 0), pygame.Rect(goal_pos[x][y][0]-RECT_X/8 + x_offset, goal_pos[x][y][1]-RECT_Y/8 + y_offset, RECT_X/4, RECT_Y/4))
+
+
         #surf = pygame.Surface((RECT_X, RECT_Y), pygame.SRCALPHA)
         #surf.fill((0,0,0))
         #surf = pygame.transform.rotate(surf, int(curr_pos[2]))
         #surf = pygame.transform.rotate(surf, 90)
         #surf.convert()
         #screen.blit(surf, curr_pos[:2])
-        pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos[:2]], 20, 0)
+
+        surf = pygame.Surface((RECT_X, RECT_Y), pygame.SRCALPHA)
+        surf.fill((0,0,0))
+        surf2.fill((255, 0, 0))
+        surf.blit(surf2, (5, 5))
+        surf = pygame.transform.rotate(surf, int(curr_pos[2]))
+        surf.convert()
+        screen.blit(surf, curr_pos[:2])
+
+        # OLD CIRCULAR AGENT
+        # pygame.draw.circle(screen, (0,0,0), [int(v) for v in curr_pos[:2]], 20, 0)
         pygame.display.update()
 
         #if a == 200:

@@ -54,7 +54,7 @@ def get_start(win_y=600, win_x=800):
         max_y = win_y - min_y
     x = round(np.random.uniform(min_x, max_x))
     y = round(np.random.uniform(min_y, max_y))
-    rot = np.random.randint(0, 180)
+    rot = np.random.randint(0, 360)
     return x, y, rot
 
 def get_next_move(curr_x, curr_y, cur_rot, goal_x, goal_y, goal_rot):
@@ -91,7 +91,7 @@ def get_next_move(curr_x, curr_y, cur_rot, goal_x, goal_y, goal_rot):
     if abs(true_rot) <= .25:
         rot = true_rot
     else:
-        rot = ((true_rot)/(linefunc(abs(true_rot))) + np.random.randint(-1, 2)) * (np.random.rand() - .1)
+        rot = ((true_rot)/(linefunc(abs(true_rot))) + np.random.randint(-1, 2)) * (np.random.rand() - .1) * .5
 
 
     return x, y, rot
@@ -200,6 +200,9 @@ def sim(gx, gy, name, config):
                 [(0.49, 0.22), (0.49, 0.15), (0.49, 0.08)],
                 [(0.42, 0.22), (0.42, 0.15), (0.42, 0.08)]]
 
+    div = [400, 300, 180] if config.normalize else [1, 1]
+    sub = [400, 300, 180] if config.normalize else [0, 0]
+
     #tau_opts = goal_pos
 
     # Note that we have the goal positions listed above. The ones that are listed are the current ones that we are using
@@ -237,7 +240,7 @@ def sim(gx, gy, name, config):
         if config.color:
             tau_opts = np.random.randint(0, 255, (3,3,3))
         tau = get_tau(gx, gy, tau_opts)
-        rect_rot = np.random.randint(0,180, (9,))
+        rect_rot = np.random.randint(0,360, (9,))
         if args.rotation:
             rect_rot = np.ones(9) * 90
         x_offset = np.random.randint(0, 200)
@@ -295,16 +298,14 @@ def sim(gx, gy, name, config):
                     depth = Image.fromarray(np.uint8(np.zeros((600,800))))
                     depth.save(save_folder + str(i_frame) + "_depth.png")
                     vel = np.array(curr_pos)-np.array(prev_pos)
-                    div = [400, 300] if config.normalize else [1, 1]
-                    sub = [400, 300] if config.normalize else [0, 0]
                     save_tau = list(tau)
                     if config.color:
                         save_tau = [2*float(st)/255-1 for st in save_tau]
-                    #elif config.normalize:
-                    #    save_tau = [(save_tau[0] - sub[0]) / div[0], (save_tau[1] - sub[1]) / div[1]]
-                    norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1], curr_pos[2] / 90 - 1]
-                    norm_goal = [(goal_pos[gx][gy][0] + x_offset - sub[0]) / div[0], (goal_pos[gx][gy][1] + y_offset - sub[1]) / div[1], rect_rot[3*gx + gy] / 90 - 1]
-                    writer.writerow([i_frame] + norm_pos + [0, 0, 0, 0, vel[0], vel[1], vel[2], 0, 0, 0, 0] + save_tau + norm_goal)
+                    norm_pos = [(curr_pos[i] - sub[i]) / div[i] for i in range(3)]
+                    norm_pos = norm_pos[:2] + [np.sin(np.pi * norm_pos[2]), np.cos(np.pi * norm_pos[2])]
+                    norm_goal = [(goal_pos[gx][gy][0] + x_offset - sub[0]) / div[0], (goal_pos[gx][gy][1] + y_offset - sub[1]) / div[1], (rect_rot[3*gx + gy] - sub[2]) / div[2]]
+                    norm_goal = norm_goal[:2] + [np.sin(np.pi * norm_goal[2]), np.cos(np.pi * norm_goal[2])]
+                    writer.writerow([i_frame] + norm_pos + [':'] + list(vel) + [':'] + save_tau + [':'] + norm_goal)
                     i_frame += 1
                     prev_pos = curr_pos
                     print(i_frame, curr_pos, vel)
@@ -322,7 +323,7 @@ def sim(gx, gy, name, config):
                     delta_y = np.clip(goal_pos[gx][gy][1] + y_offset - curr_pos[1], -3, 3)
                 if args.rotation:
                     delta_rot = 0
-                new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y, curr_pos[2] + delta_rot]#[(aux[0][0].item()+1)*400, (aux[0][1].item()+1)*300]#
+                new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y, (curr_pos[2] + delta_rot) % 360]
 
                 if (curr_pos[0] == new_pos[0]) and (curr_pos[1] == new_pos[1]) and (curr_pos[2] == new_pos[2]):
                     curr_pos = new_pos
@@ -333,16 +334,14 @@ def sim(gx, gy, name, config):
                             depth = Image.fromarray(np.uint8(np.zeros((600,800))))
                             depth.save(save_folder + str(i_frame) + "_depth.png")
                             # Record data
-                            div = [400, 300] if config.normalize else [1, 1]
-                            sub = [400, 300] if config.normalize else [0, 0]
                             save_tau = list(tau)
                             if config.color:
                                 save_tau = [2*float(st)/255-1 for st in save_tau]
-                            #elif config.normalize:
-                            #    save_tau = [(save_tau[0] - sub[0]) / div[0], (save_tau[1] - sub[1]) / div[1]]
-                            norm_pos = [(curr_pos[0] - sub[0]) / div[0], (curr_pos[1] - sub[1]) / div[1], curr_pos[2] / 90 - 1]
-                            norm_goal = [(goal_pos[gx][gy][0] + x_offset - sub[0]) / div[0], (goal_pos[gx][gy][1] + y_offset - sub[1]) / div[1], rect_rot[3*gx + gy] / 90 - 1]
-                            writer.writerow([i_frame] + norm_pos + [0, 0, 0, 0, vel[0], vel[1], vel[2], 0, 0, 0, 0] + save_tau + norm_goal)
+                            norm_pos = [(curr_pos[i] - sub[i]) / div[i] for i in range(3)]
+                            norm_pos = norm_pos[:2] + [np.sin(np.pi * norm_pos[2]), np.cos(np.pi * norm_pos[2])]
+                            norm_goal = [(goal_pos[gx][gy][0] + x_offset - sub[0]) / div[0], (goal_pos[gx][gy][1] + y_offset - sub[1]) / div[1], (rect_rot[3*gx + gy] - sub[2]) / div[2]]
+                            norm_goal = norm_goal[:2] + [np.sin(np.pi * norm_goal[2]), np.cos(np.pi * norm_goal[2])]
+                            writer.writerow([i_frame] + norm_pos + [':'] + list(vel) + [':'] + save_tau + [':'] + norm_goal)
                             i_frame += 1
                             print(prev_pos, vel)
                     print("---Stop Recording---")

@@ -12,6 +12,7 @@ import lmdb
 import pyarrow as pa
 import tqdm
 from multiprocessing import Pool
+import math
 
 splits = {}
 
@@ -51,7 +52,8 @@ def parse_raw_data(mode, config):
                 dirs = [x[0] for x in os.walk(config.root_dir + case)][1:]
                 if len(dirs) == 0:
                     raise Exception('Case %s not found at %s.' % (case, config.root_dir + case))
-                shuffle(dirs)
+                #shuffle(dirs)
+                print(dirs[0])
 
                 if config.max_traj > 0:
                     dirs = dirs[:config.max_traj]
@@ -89,6 +91,12 @@ def parse_raw_data(mode, config):
                         num_of_test += 1
         #'''
 
+def split_vector(vector):
+    i_splits = [0] + [idx+1 for idx, val in enumerate(vector[1:]) if val == ':'] + [len(vector)]
+    parts = [vector[i_splits[i]+1:i_splits[i+1]] for i in range(len(i_splits)-1)]
+    return parts
+
+
 def parse_trajectory(ins):
     sub_dir, config = ins
     rows = []
@@ -106,8 +114,7 @@ def parse_trajectory(ins):
         last = vectors.iloc[-1]
         if config.simulation:
             # FOR SIM
-            tau = [last.iloc[i] for i in range(15, len(last) - 3)]
-            aux_target = [last.iloc[i] for i in range(len(last) - 3, len(last))]
+            _, _, tau, aux_target = split_vector(list(last))
         else:
             # FOR KUKA
             tau = [last.iloc[1], last.iloc[2], last.iloc[3]]
@@ -115,7 +122,7 @@ def parse_trajectory(ins):
                           last.iloc[4], last.iloc[5], last.iloc[6]]
 
         # The length of the history will be 5
-        for i in range(0, len(pics), 2):
+        for i in range(2, len(pics), 2):
             # rgb, depth
             row = [root+"/"+pics[i+1], root+"/"+pics[i]]
             curr_idx = int(pics[i][:-10])
@@ -136,18 +143,17 @@ def parse_trajectory(ins):
                 prevs.append(curr_idx-1)
             eof = []
             for prev in prevs:
-                pos = [float(vectors[vectors[0]==prev][j]) for j in range(1,4)]
+                pos, _, _, _ = split_vector(list(vectors[vectors[0]==prev].iloc[0]))
+
                 eof = eof + pos
             # EOF: 2:17
-            row += eof
+            row += eof + [':']
             # Tau: 17:20
-            row += tau
+            row += tau + [':']
             # Auxiliary Target: 20:26
-            row += aux_target
+            row += aux_target + [':']
             if config.simulation:
-                # Output for 2D Sim Target: Linear and Angular Vel (Quaternion)
-                output = [data.iloc[0,8], data.iloc[0,9], data.iloc[0,10],
-                          data.iloc[0,11], data.iloc[0,12], data.iloc[0,13], data.iloc[0,14]]
+                _, output, _, _ = split_vector(list(data.iloc[0]))
             else:
                 # Output for Kuka Target: Linear Vel and Angular Vel (Eular): 26:32
                 output = [data.iloc[0,7], data.iloc[0,8], data.iloc[0,9],
@@ -220,12 +226,12 @@ def get_row(ins):
     # Reshape Images to have channel first
     rgb = np.transpose(rgb, (2, 0, 1))
     depth = np.reshape(depth, (1, depth.shape[0], depth.shape[1]))
-    eof = np.array([float(x) for x in row[2:17]])
+    eof, tau, aux, target = split_vector(row[2:])
+    eof = np.array([float(x) for x in eof])
     if config.simulation:
-        rl = len(row)
-        tau = np.array([float(x) for x in row[17:rl-10]])
-        aux = np.array([float(x) for x in row[rl-10:rl-7]])
-        target = np.array([float(x) for x in row[rl-7:rl]])
+        tau = np.array([float(x) for x in tau])
+        aux = np.array([float(x) for x in aux])
+        target = np.array([float(x) for x in target])
     else:
         tau = np.array([float(x) for x in row[17:20]])
         aux = np.array([float(x) for x in row[20:26]])

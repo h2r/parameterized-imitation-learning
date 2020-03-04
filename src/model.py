@@ -27,7 +27,7 @@ class CoordConv2d(nn.Module):
         self.conditioning = conditioning
         self.width = 5
         self.height = 5
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout2d(dropout)
         self.batch_norm = nn.BatchNorm2d(args[1]) if batch_norm else lambda x: x
 
         coords = torch.zeros(2, self.width, self.height)
@@ -308,6 +308,8 @@ class Model(nn.Module):
         x = torch.cat([x.view(x.size(0), -1), x2, tau], dim=1)
 
         aux = self.aux(x)
+        if aux_in is not None:
+            aux = torch.cat([aux_in[:, :2], torch.sin(3.14*aux_in[:, 2:3]), torch.cos(3.14*aux_in[:, 2:3])], dim=1)
         if b_print:
             print(aux[0])
             plt.figure(4)
@@ -318,7 +320,7 @@ class Model(nn.Module):
             plt.savefig(print_path+'spatial_softmax.png')
 
         x = F.leaky_relu(self.fl1(x))
-        x = self.fl2(torch.cat([aux, x, eof], dim=1))
+        x = self.fl2(torch.cat([aux.detach(), x, eof], dim=1))
         x = self.output(x)
 
         return x, aux#, x2
