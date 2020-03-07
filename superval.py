@@ -350,10 +350,9 @@ if __name__ == '__main__':
     taus = ['onehot', 'tau']
 
     for num_buttons in range(1,10):
-        for arrangement in arrange(num_buttons, config.max_arrangements, all_goals):
-            print('Running following subset: ' + str(arrangement))
-            for use_tau in [1]:
-                #print_open_fds(True)
+        for arrangement in arrange(num_buttons, config.max_arrangements):
+            for use_tau in [0, 1]:
+                print_open_fds(True)
                 config.save_path   = config.out_root + '/' + taus[use_tau] + '/' + str(num_buttons) + '/' + str(arrangement)
                 config.use_tau     = use_tau
                 config.train_cases = arrangement
