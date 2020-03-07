@@ -47,7 +47,8 @@ def sim(model, config):
                 [(1, 0), (1, 1), (1, 2)],
                 [(2, 0), (2, 1), (2, 2)]]
 
-    #tau_opts = [[(1,0), (2,0), (3,0)],
+    #tau_opts = [[(1,0), (2,0), (3,0)],  File "/home/nishanth/miniconda3/envs/py3_pytorch_cuda10/lib/python3.7/site-packages/torch/nn/modules/module.py", line 493, in __call__
+
     #          [(3,1), (1,1), (2,1)],
     #          [(2,2), (3,2), (1,2)]]
 
@@ -85,12 +86,20 @@ def sim(model, config):
     #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
     tau = get_tau(gx, gy, tau_opts)#(gx, gy)
     if args.rotation:
-    #    rect_rot = np.ones(9) * 90
+        # rect_rot = np.ones(9) * 35
         rect_rot = np.random.randint(0,360, (9,))
     else:
+        # rect_rot = np.ones(9) * 35
         rect_rot = np.random.randint(0,360, (9,))
-    x_offset = np.random.randint(0, 200)
-    y_offset = np.random.randint(0, 200)
+
+    # x_offset = np.random.randint(0, 200)
+    # y_offset = np.random.randint(0, 200)
+
+    # This is the values used for the only_rot experiments
+    x_offset = 150
+    y_offset = 150
+
+
     _gx, _gy = get_tau(gx, gy, goal_pos)
     _gx += x_offset
     _gy += y_offset
@@ -128,10 +137,11 @@ def sim(model, config):
         div = [400, 300, 180] if config.normalize else [1, 1]
         sub = [400, 300, 180] if config.normalize else [0, 0]
         norm_pos = [(curr_pos[i] - sub[i]) / div[i] for i in range(3)]
+        norm_pos = norm_pos[:2] + [np.sin(np.pi * norm_pos[2]), np.cos(np.pi * norm_pos[2])]
         if eof is None:
             eof = torch.FloatTensor(norm_pos * 5)
         else:
-            eof = torch.cat([torch.FloatTensor(norm_pos), eof[0:12]])
+            eof = torch.cat([torch.FloatTensor(norm_pos), eof[0:16]])
 
         # Calculate the trajectory
         in_tau = torch.FloatTensor(tau)
@@ -140,20 +150,24 @@ def sim(model, config):
         out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
-        sin_cos = out[2:4]
-        mag = torch.sqrt(sin_cos[0]**2 + sin_cos[1]**2)
-        sin_cos = sin_cos / mag
-        delta_rot = (torch.atan2(sin_cos[0], sin_cos[1]).item() / 3.14159) * 180
+        delta_rot = out[2].item()
+
+        # This block is a relic from when the network output sin and cos values
+        # sin_cos = out[2:4]
+        # mag = torch.sqrt(sin_cos[0]**2 + sin_cos[1]**2)
+        # sin_cos = sin_cos / mag
+        # delta_rot = (torch.atan2(sin_cos[0], sin_cos[1]).item() / 3.14159) * 180
         new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y, (curr_pos[2] + delta_rot) % 360]
-        sin_cos = aux.squeeze()[2:4]
-        mag = torch.sqrt(sin_cos[0]**2 + sin_cos[1]**2)
-        sin_cos = sin_cos / mag
-        aux_rot = (torch.atan2(sin_cos[0] , sin_cos[1]).view(-1, 1) / 3.14159) - 1
+        # sin_cos = aux.squeeze()[2:4]
+        # mag = torch.sqrt(sin_cos[0]**2 + sin_cos[1]**2)
+        # sin_cos = sin_cos / mag
+        # aux_rot = (torch.atan2(sin_cos[0] , sin_cos[1]).view(-1, 1) / 3.14159) - 1
 
         print(eof.numpy())
         print(delta_rot)
         print([-1*np.sin(new_pos[2] / 180 * 3.14159), -1*np.cos(new_pos[2] / 180 * 3.14159)])
-        print(-1*aux)
+        print([np.sin((rect_rot[0] / 180) * np.pi), np.cos((rect_rot[0] / 180) * np.pi)])
+        print(aux)
         # print([-1*np.sin(rect_rot[3*gx+gy] / 180 * 3.14159), -1*np.cos(rect_rot[3*gx+gy] / 180 * 3.14159)])
         # print(fix_rot(torch.FloatTensor([rect_rot[3*gx+gy] / 180 - 1]).view(-1, 1), aux_rot))
         # print(fix_rot(torch.FloatTensor([rect_rot[3*gx+gy] / 180 - 1]).view(-1, 1), torch.FloatTensor([new_pos[2]/180 - 1]).view(-1, 1)))
@@ -191,6 +205,7 @@ def sim(model, config):
             surf.fill(color)
             surf.blit(surf2, (5, 5))
             surf = pygame.transform.rotate(surf, rect_rot[3*x+y])
+            print(rect_rot[3*x+y])
             surf.convert()
             screen.blit(surf, (goal_pos[x][y][0] + x_offset, goal_pos[x][y][1] + y_offset))
 

@@ -22,6 +22,8 @@ RECT_Y = 30
 
 goals_x = [0, 1, 2]
 goals_y = [0, 1, 2]
+# goals_x = [0]
+# goals_y = [0]
 
 goal_pos = [[(100, 50), (100, 200), (100, 350)],
             [(300, 50), (300, 200), (300, 350)],
@@ -83,18 +85,23 @@ def get_next_move(curr_x, curr_y, cur_rot, goal_x, goal_y, goal_rot):
         y = ((goal_y - curr_y)/linefunc(abs(curr_y - goal_y)) + np.random.randint(-1, 2)) * (np.random.rand() - .1)
 
     # rotational Movement
+    true_rot = derot(goal_rot, cur_rot)
+    if abs(true_rot) <= .25:
+        rot = true_rot
+    else:
+        rot = ((true_rot)/(linefunc(abs(true_rot))) + np.random.randint(-1, 2)) * (np.random.rand() - .1) * .25
+
+
+    return x, y, rot
+
+
+def derot(goal_rot, cur_rot):
     if abs(goal_rot - cur_rot) > 180:
         true_rot = (goal_rot - cur_rot) / (abs(goal_rot - cur_rot) + 1e-6)
         true_rot = -1 * true_rot * (360 - abs(cur_rot - goal_rot))
     else:
         true_rot = goal_rot - cur_rot
-    if abs(true_rot) <= .25:
-        rot = true_rot
-    else:
-        rot = ((true_rot)/(linefunc(abs(true_rot))) + np.random.randint(-1, 2)) * (np.random.rand() - .1) * .5
-
-
-    return x, y, rot
+    return true_rot
 
 
 def overlap(ob1, ob2):
@@ -108,6 +115,7 @@ def get_obstacles(num, buttons_offset, player_pos):
         height = np.random.rand()*300
         x = np.random.rand()*(600 - width)
         y = np.random.rand()*(600 - height)
+
 
         overlap_flag = False
         for tx, ty in list(itertools.product(goals_x, goals_y)):
@@ -243,8 +251,14 @@ def sim(gx, gy, name, config):
         rect_rot = np.random.randint(0,360, (9,))
         if args.rotation:
             rect_rot = np.ones(9) * 90
+
+        # This is the offset used to decide the button position
         x_offset = np.random.randint(0, 200)
         y_offset = np.random.randint(0, 200)
+        #x_offset = 150
+        #y_offset = 150
+
+
         obstacles = get_obstacles(6, (x_offset, y_offset), [int(v) for v in curr_pos])
         plan_map = None
         folder = task_path + str(i_trajecory) + '/'
@@ -298,6 +312,7 @@ def sim(gx, gy, name, config):
                     depth = Image.fromarray(np.uint8(np.zeros((600,800))))
                     depth.save(save_folder + str(i_frame) + "_depth.png")
                     vel = np.array(curr_pos)-np.array(prev_pos)
+                    vel[2] = derot(curr_pos[2], prev_pos[2])
                     save_tau = list(tau)
                     if config.color:
                         save_tau = [2*float(st)/255-1 for st in save_tau]
@@ -321,8 +336,8 @@ def sim(gx, gy, name, config):
                 if delta_x == 0 and delta_y == 0:
                     delta_x = np.clip(goal_pos[gx][gy][0] + x_offset - curr_pos[0], -3, 3)
                     delta_y = np.clip(goal_pos[gx][gy][1] + y_offset - curr_pos[1], -3, 3)
-                if args.rotation:
-                    delta_rot = 0
+                # if args.rotation:
+                #     delta_rot = 0
                 new_pos = [curr_pos[0] + delta_x, curr_pos[1] + delta_y, (curr_pos[2] + delta_rot) % 360]
 
                 if (curr_pos[0] == new_pos[0]) and (curr_pos[1] == new_pos[1]) and (curr_pos[2] == new_pos[2]):
@@ -358,7 +373,7 @@ def sim(gx, gy, name, config):
                     curr_pos = get_start()
                     if args.rotation:
                         rect_rot = np.ones(9) * 90
-                        curr_pos = (curr_pos[0], curr_pos[1], 90)
+                        # curr_pos = (curr_pos[0], curr_pos[1], 90)
                     break
 
                 curr_pos = new_pos
@@ -382,6 +397,8 @@ if __name__ == '__main__':
 
     goals_x = [0, 1, 2]
     goals_y = [0, 1, 2]
+    # goals_x = [0]
+    # goals_y = [0]
 
     if args.buttons is None:
         args.buttons = list(itertools.product(goals_x, goals_y))

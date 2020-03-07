@@ -27,7 +27,7 @@ class CoordConv2d(nn.Module):
         self.conditioning = conditioning
         self.width = 5
         self.height = 5
-        self.dropout = nn.Dropout2d(dropout)
+        self.dropout = nn.Dropout2d(0)
         self.batch_norm = nn.BatchNorm2d(args[1]) if batch_norm else lambda x: x
 
         coords = torch.zeros(2, self.width, self.height)

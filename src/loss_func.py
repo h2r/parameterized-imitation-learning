@@ -42,7 +42,7 @@ class BehaviorCloneLoss(nn.Module):
 
         out = torch.cat([x, y, z, out[:, 3:]], dim=1)
         '''
-        l2_loss = self.l2(out[:, :2], target[:, :2]) * 2 / 3 + self.l2(10 * out[:, 2], 10 * target[:, 2]) / 3
+        l2_loss = self.l2(out[:, :2], target[:, :2]) * 2 / 3 + self.l2(out[:, 2], target[:, 2]) / 3
         l1_loss = self.l1(out, target)
 
         # For the arccos loss
@@ -77,7 +77,7 @@ class BehaviorCloneLoss(nn.Module):
 
             print('L2 x: %.2f' % self.l2(out[:, 0], target[:, 0]))
             print('L2 y: %.2f' % self.l2(out[:, 1], target[:, 1]))
-            print('L2 theta: %.2f' % self.l2(10 * out[:, 2], 10 * target[:, 2]))
+            print('L2 theta: %.2f' % self.l2(out[:, 2], target[:, 2]))
 
             if torch.isnan(c_loss):
                 print('num: %s' % str(num))

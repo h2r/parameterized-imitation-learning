@@ -96,6 +96,14 @@ def split_vector(vector):
     parts = [vector[i_splits[i]+1:i_splits[i+1]] for i in range(len(i_splits)-1)]
     return parts
 
+def split_vector2(vector):
+    i_splits = [-1] + [idx+1 for idx, val in enumerate(vector[1:]) if val == ':'] + [len(vector)]
+    parts = [vector[i_splits[i]+1:i_splits[i+1]] for i in range(len(i_splits)-1)]
+    # print(i_splits)
+    # print(vector)
+    # print(len(parts[0]))
+    return parts
+
 
 def parse_trajectory(ins):
     sub_dir, config = ins
@@ -144,10 +152,13 @@ def parse_trajectory(ins):
             eof = []
             for prev in prevs:
                 pos, _, _, _ = split_vector(list(vectors[vectors[0]==prev].iloc[0]))
-
                 eof = eof + pos
+
             # EOF: 2:17
             row += eof + [':']
+
+        #    print(row)
+
             # Tau: 17:20
             row += tau + [':']
             # Auxiliary Target: 20:26
@@ -226,7 +237,7 @@ def get_row(ins):
     # Reshape Images to have channel first
     rgb = np.transpose(rgb, (2, 0, 1))
     depth = np.reshape(depth, (1, depth.shape[0], depth.shape[1]))
-    eof, tau, aux, target = split_vector(row[2:])
+    eof, tau, aux, target = split_vector2(row[2:])
     eof = np.array([float(x) for x in eof])
     if config.simulation:
         tau = np.array([float(x) for x in tau])

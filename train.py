@@ -237,7 +237,7 @@ def train(config):
                             '''
                             if running_loss == 0:
                                 rgb = inputs[0][0].cpu().squeeze().permute(1, 2, 0)
-                                print(rgb.min(), rgb.max())
+                                print(rgb.min(), rgb.max())datasets
 
                                 depth = inputs[1][0].cpu().squeeze()
                                 print(depth.min(), depth.max())
@@ -310,7 +310,7 @@ if __name__ == '__main__':
     parser.add_argument('-taus', '--tau_size', default=3, type=int, help='Tau Size')
     parser.add_argument('-auxs', '--aux_size', default=6, type=int, help='Aux Size')
     parser.add_argument('-outs', '--out_size', default=6, type=int, help='Out Size')
-    parser.add_argument('-sr', '--save_rate', default=25, type=int, help='Epochs between checkpoints')
+    parser.add_argument('-sr', '--save_rate', default=10, type=int, help='Epochs between checkpoints')
     parser.add_argument('-l_two', '--l2_norm', default=0, type=float, help='l2 norm constant')
     parser.add_argument('-opt', '--optimizer', default='adam', help='Optimizer, currently options are "adam" and "novograd"')
     parser.add_argument('-si', '--sim', default=False, dest='sim', action='store_true', help='Flag indicating data is from 2d sim')
