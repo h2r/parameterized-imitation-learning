@@ -309,7 +309,7 @@ class Model(nn.Module):
 
         aux = self.aux(x)
         if aux_in is not None:
-            aux = torch.cat([aux_in[:, :2], torch.sin(3.14*aux_in[:, 2:3]), torch.cos(3.14*aux_in[:, 2:3])], dim=1)
+            aux = aux_in
         if b_print:
             print(aux[0])
             plt.figure(4)

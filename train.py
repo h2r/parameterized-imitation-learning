@@ -184,7 +184,7 @@ def train(config):
                     #targets += [torch.stack([targets[1][:,0]/400 - 1, targets[1][:,1]/300 - 1],dim=1)]
 
                     if config.zero_eof:
-                        inputs[2][:, :-3] = 0   # No trajectory info from eof
+                        inputs[2][:, 4:] = 0   # No trajectory info from eof
 
                     if config.abstract_tau:
                         #'''
@@ -261,7 +261,7 @@ def train(config):
                         elif mode == "test":
                             model.eval()
                             with torch.no_grad():
-                                out, aux_out = model(inputs[0], inputs[1], inputs[2] * config.scale, inputs[3] * config.scale, aux_in=aux_in)
+                                out, aux_out = model(inputs[0], inputs[1], inputs[2] * config.scale, inputs[3] * config.scale)#, aux_in=aux_in)
                                 loss = criterion(out, aux_out, targets[0] * config.scale, targets[1] * config.scale, flag)
                                 running_loss += loss.item()#*curr_bs)
                     flag = False
@@ -269,11 +269,13 @@ def train(config):
                 cost_file.write(str(epoch)+","+mode+","+str(cost)+"\n")
                 if mode == 'test':
                     model.reset()
+                    model.eval()
                     if lowest_test_cost >= cost:
                         torch.save({
                             'epoch': epoch,
                             'model_state_dict': model.state_dict(),
                             'kwargs': kwargs,
+                            'config': config,
                             'optimizer_state_dict': optimizer.state_dict(),
                             'loss': cost
                             }, config.save_path+"/best_checkpoint.tar")
@@ -283,6 +285,7 @@ def train(config):
                             'epoch': epoch,
                             'model_state_dict': model.state_dict(),
                             'kwargs': kwargs,
+                            'config': config,
                             'optimizer_state_dict': optimizer.state_dict(),
                             'loss': cost
                             }, config.save_path+"/"+str(epoch)+"_checkpoint.tar")

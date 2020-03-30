@@ -14,23 +14,9 @@ def verify_data(config):
         model.eval()
 
     dataset = ImitationLMDB(config.data_dir, config.mode)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=200, shuffle=config.shuffle)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=config.shuffle)
 
-    max_ = None
-    min_ = None
     for data in dataloader:
-        if max_ is not None:
-            for i in range(len(data) - 2):
-                data[2 + i] = torch.cat([data[2+i], max_[i], min_[i]], dim=0)
-        min_ = [torch.min(d, dim=0).values.unsqueeze(0) for d in data[2:]]
-        max_ = [torch.max(d, dim=0).values.unsqueeze(0) for d in data[2:]]
-
-        print([m.squeeze() for m in min_])
-        print([m.squeeze() for m in max_])
-        print('============')
-        print('============')
-
-        '''
         rgb = data[0].squeeze().permute(1, 2, 0)
         print(rgb.min(), rgb.max())
 
@@ -56,7 +42,6 @@ def verify_data(config):
             plt.show()
 
         print('==========================')
-        '''
 
 
 

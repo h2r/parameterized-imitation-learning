@@ -29,9 +29,6 @@ goal_pos = [[(100, 50), (100, 200), (100, 350)],
             [(300, 50), (300, 200), (300, 350)],
             [(500, 50), (500, 200), (500, 350)]]
 
-
-
-
 def line(m, b):
     def inline(x):
         return m*x + b
@@ -44,6 +41,7 @@ def get_tau(goal_x, goal_y, options):
 
 def get_start(win_y=600, win_x=800):
     horiz = False #np.random.uniform() < .5
+
     if horiz:
         min_x = 20
         max_x = win_x - min_x
@@ -89,7 +87,7 @@ def get_next_move(curr_x, curr_y, cur_rot, goal_x, goal_y, goal_rot):
     if abs(true_rot) <= .25:
         rot = true_rot
     else:
-        rot = ((true_rot)/(linefunc(abs(true_rot))) + np.random.randint(-1, 2)) * (np.random.rand() - .1) * .25
+        rot = ((true_rot)/(linefunc(abs(true_rot))) + np.random.randint(-1, 2)) * (np.random.rand() - .1) * .5
 
 
     return x, y, rot
@@ -248,7 +246,9 @@ def sim(gx, gy, name, config):
         if config.color:
             tau_opts = np.random.randint(0, 255, (3,3,3))
         tau = get_tau(gx, gy, tau_opts)
-        rect_rot = np.random.randint(0,360, (9,))
+
+        rect_rot = np.random.randint(180, 360, (9,))
+        # rect_rot = np.random.randint(0, 360) * np.ones(9)
         if args.rotation:
             rect_rot = np.ones(9) * 90
 

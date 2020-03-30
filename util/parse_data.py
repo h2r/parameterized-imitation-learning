@@ -52,8 +52,8 @@ def parse_raw_data(mode, config):
                 dirs = [x[0] for x in os.walk(config.root_dir + case)][1:]
                 if len(dirs) == 0:
                     raise Exception('Case %s not found at %s.' % (case, config.root_dir + case))
-                #shuffle(dirs)
-                print(dirs[0])
+                shuffle(dirs)
+                #print(dirs[0])
 
                 if config.max_traj > 0:
                     dirs = dirs[:config.max_traj]
@@ -311,7 +311,8 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--max_traj', default=0, type=int, help='Maximum number of trajectories to use per case')
     args = parser.parse_args()
 
-    os.makedirs(args.dest_dir)
+    data_folder = args.root_dir[args.root_dir[:-1].rfind('/'):]
+    os.makedirs(args.dest_dir + data_folder)
 
     if args.clean_data:
         print("IMAGE PREPROCESSING STARTING...")
