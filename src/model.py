@@ -224,17 +224,17 @@ class Model(nn.Module):
         # Testing the auxiliary for finding final pose. It was shown in many tasks that
         # predicting the final pose was a helpful auxiliary task. EE Pose is <x,y,z,q_x,q_y,q_z,q_w>.
         # Note that the output from the spatial softmax is 32 (x,y) positions and thus 64 variables
-        self.aux = nn.Sequential(nn.Linear(512*2 + tau_size, 40, bias=use_bias),
+        self.aux = nn.Sequential(nn.Linear(512*2 + tau_size, 512, bias=use_bias),
                                  nn.LeakyReLU(),
-                                 nn.Linear(40, aux_size, bias=use_bias))
+                                 nn.Linear(512, aux_size, bias=use_bias))
         # This is where the concatenation of the output from spatialsoftmax
-        self.fl1 = nn.Linear(512*2 + tau_size, 50, bias=use_bias)
+        self.fl1 = nn.Linear(512*2 + tau_size, 512, bias=use_bias)
         # Concatenating the Auxiliary Predictions and EE history. Past 5 history of <x,y,z>.
         # This comes out to 50 + 6 (aux) + 15 (ee history) = 71\
-        self.fl2 = nn.Linear(50+eof_size+aux_size, 50, bias=use_bias)
+        self.fl2 = nn.Linear(512+eof_size+aux_size, 512, bias=use_bias)
 
 	    # We use 6 to incorporate the loss function (linear vel, angular vel)
-        self.output = nn.Linear(50, out_size, bias=use_bias)
+        self.output = nn.Linear(512, out_size, bias=use_bias)
 
 
     def reset(self):
@@ -319,8 +319,8 @@ class Model(nn.Module):
             plt.ylim(-1, 1)
             plt.savefig(print_path+'spatial_softmax.png')
 
-        x = F.leaky_relu(self.fl1(x))
-        x = self.fl2(torch.cat([aux.detach(), x, eof], dim=1))
+        x = self.dropout(F.leaky_relu(self.fl1(x)))
+        x = self.dropout(F.leaky_relu(self.fl2(torch.cat([aux.detach(), x, eof], dim=1))))
         x = self.output(x)
 
         return x, aux#, x2

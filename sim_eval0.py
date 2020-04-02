@@ -209,7 +209,7 @@ def sim(model, config):
         out = None
         aux = None
         with torch.no_grad():
-            out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof), b_print=config.print, print_path=print_loc, aux_in = torch.rand(1,4))
+            out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof), b_print=config.print, print_path=print_loc)#, aux_in = torch.rand(1,4))
             out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
