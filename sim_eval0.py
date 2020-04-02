@@ -116,7 +116,11 @@ def sim(model, config):
                     curr_pos = get_start()
                     #curr_pos[2] = np.random.randint(0, 360)
                 if event.key == R_KEY:
-                    gx, gy = get_tau_()#np.random.randint(0, 3, (2,))
+                    x_offset = np.random.randint(0, 200)
+                    y_offset = np.random.randint(0, 200)
+                    rect_rot = np.ones(9) * np.random.randint(0,360)
+
+                    # gx, gy = get_tau_()#np.random.randint(0, 3, (2,))
                     #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
                     tau = (gx, gy)#get_tau(gx, gy, tau_opts)
                 if event.key == ESCAPE_KEY:
@@ -205,7 +209,7 @@ def sim(model, config):
         out = None
         aux = None
         with torch.no_grad():
-            out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof), b_print=config.print, print_path=print_loc)
+            out, aux = model(rgb, depth, eof.view(1, -1), in_tau.view(1, -1).to(eof), b_print=config.print, print_path=print_loc, aux_in = torch.rand(1,4))
             out = out.squeeze()
         delta_x = out[0].item()
         delta_y = out[1].item()
