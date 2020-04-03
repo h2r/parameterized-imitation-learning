@@ -40,18 +40,31 @@ def get_tau(goal_x, goal_y, options):
     return options[goal_x][goal_y]
 
 def get_start(win_y=600, win_x=800):
-    horiz = False #np.random.uniform() < .5
-
-    if horiz:
+    start_dir = np.random.choice(["north", "south", "east", "west"])
+    print()
+    print(start_dir)
+    print()
+    if(start_dir == "north"):
         min_x = 20
         max_x = win_x - min_x
         min_y = 15
         max_y = 30
-    else:
+    elif(start_dir == "east"):
         min_x = win_x - 50
         max_x = win_x - 40
         min_y = 50
         max_y = win_y - min_y
+    elif(start_dir == "west"):
+        min_x = 40
+        max_x = 50
+        min_y = 50
+        max_y = win_y - min_y
+    else:
+        min_x = 20
+        max_x = win_x - min_x
+        min_y = win_y - 40
+        max_y = win_y - 30
+
     x = round(np.random.uniform(min_x, max_x))
     y = round(np.random.uniform(min_y, max_y))
     rot = np.random.randint(0, 360)
@@ -87,7 +100,7 @@ def get_next_move(curr_x, curr_y, cur_rot, goal_x, goal_y, goal_rot):
     if abs(true_rot) <= .25:
         rot = true_rot
     else:
-        rot = ((true_rot)/(linefunc(abs(true_rot))) + np.random.randint(-1, 2)) * (np.random.rand() - .1) * .5
+        rot = ((true_rot)/(linefunc(abs(true_rot))) + np.random.randint(-1, 2)) * (np.random.rand() - .1) * .8
 
 
     return x, y, rot
