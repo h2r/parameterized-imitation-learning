@@ -189,12 +189,12 @@ class SpatialSoftmax(nn.Module):
         return feature_keypoints
 
 
-class Model(nn.Module):
+class Model0(nn.Module):
     """
     The net implemented from Deep Imitation Learning from Virtual Teleoperation with parameterization
     """
     def __init__(self, use_bias=True, use_tau=True, eof_size=15, tau_size=3, aux_size=6, out_size=7):
-        super(Model, self).__init__()
+        super(Model0, self).__init__()
         self.use_bias = use_bias
         self.use_tau  = use_tau
         self.eof_size = eof_size
@@ -207,10 +207,10 @@ class Model(nn.Module):
         self.conv2 = CoordConv2d(32, 32, kernel_size=3, stride=1, batch_norm=True, dropout=.2, bias=use_bias)
         self.conv3 = CoordConv2d(32, 64, kernel_size=3, stride=2, batch_norm=True, dropout=.2, bias=use_bias)
         self.conv4 = CoordConv2d(64, 64, kernel_size=3, stride=1, batch_norm=True, dropout=.2, bias=use_bias)
-        self.conv5 = CoordConv2d(64, 128, kernel_size=3, stride=2, batch_norm=True, dropout=.2, attend=512, conditioning=32, use_coords=True, bias=use_bias)
+        self.conv5 = CoordConv2d(64, 128, kernel_size=3, stride=2, batch_norm=True, dropout=.2, bias=use_bias)
         self.conv6 = CoordConv2d(128, 128, kernel_size=3, stride=1, batch_norm=True, dropout=.2, bias=use_bias)
         self.conv7 = CoordConv2d(128, 256, kernel_size=3, stride=1, batch_norm=True, dropout=.2, bias=use_bias)
-        self.conv8 = CoordConv2d(256, 256, kernel_size=3, stride=1, batch_norm=True, dropout=.2, attend=512, conditioning=32, use_coords=True, bias=use_bias)
+        self.conv8 = CoordConv2d(256, 256, kernel_size=3, stride=1, batch_norm=True, dropout=.2, bias=use_bias)
 
         self.conv_lin1 = nn.Linear(256*(11*6), 512)
         self.conv_lin2 = nn.Linear(512, 512)
@@ -280,22 +280,16 @@ class Model(nn.Module):
                     y = y / np.amax(y)
                     plt.imshow(y)
             plt.savefig(print_path+'activations4.png')
-        x, x2 = self.conv5(x, cond[4])
+        x = self.conv5(x, cond[4])
         x = self.conv6(x, cond[5])
         x = self.conv7(x, cond[6])
-        x, x3 = self.conv8(x, cond[7])
+        x = self.conv8(x, cond[7])
         if b_print:
         #    print(tau[0])
         #    print(eof[0])
             plt.figure(1)
             plt.imshow(rgb[0].permute(1,2,0).detach().cpu().numpy())
             plt.savefig(print_path+'rgb.png')
-            plt.figure(5)
-            plt.imshow(x2[0,0].detach().cpu().numpy())
-            plt.savefig(print_path+'attention.png')
-            plt.figure(6)
-            plt.imshow(x3[0,0].detach().cpu().numpy())
-            plt.savefig(print_path+'attention2.png')
             plt.figure(2)
             plt.imshow(depth[0,0].detach().cpu().numpy())
             plt.savefig(print_path+'depth.png')

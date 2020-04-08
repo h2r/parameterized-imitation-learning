@@ -1,4 +1,5 @@
 from src.model import Model
+from src.model0 import Model0
 from src.loss_func import BehaviorCloneLoss, LossException
 from src.datasets import ImitationLMDB
 
@@ -127,7 +128,10 @@ def train(config):
     # Define model, dataset, dataloader, loss, optimizer
     kwargs = {'use_bias':not config.use_bias, 'use_tau':config.use_tau, 'eof_size':sizer[2].shape[0], 'tau_size':sizer[3].shape[0], 'aux_size':sizer[5].shape[0], 'out_size':sizer[4].shape[0]}
     print(kwargs)
-    model = Model(**kwargs).to(config.device)
+    if args.attention:
+        model = Model(**kwargs).to(config.device)
+    else:
+        model = Model0(**kwargs).to(config.device)
     sizer = None
     try:
         os.makedirs(config.save_path)
@@ -319,6 +323,7 @@ if __name__ == '__main__':
     parser.add_argument('-si', '--sim', default=False, dest='sim', action='store_true', help='Flag indicating data is from 2d sim')
     parser.add_argument('-u', '--use_tau', default=True, dest='use_tau', action='store_false', help='Flag indicating not to use tau')
     parser.add_argument('-at', '--abstract_tau', default=False, dest='abstract_tau', action='store_true', help='Flag indicating not to use tau')
+    parser.add_argument('-att', '--attention', default=False, dest='attention', action='store_true', help='Flag indicating to use attention')
     args = parser.parse_args()
 
     device = None

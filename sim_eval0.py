@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 from src.model import Model
+from src.model0 import Model0
 from src.loss_func import fix_rot
 import torch
 from simulation.sim import get_start, get_tau, RECT_X, RECT_Y, goals_x, goals_y, goal_pos
@@ -86,11 +87,12 @@ def sim(model, config):
     #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
     tau = get_tau(gx, gy, tau_opts)#(gx, gy)
     if args.rotation:
-        rect_rot = np.ones(9) * np.random.randint(0,360)
+        # rect_rot = np.ones(9) * np.random.randint(0,360)
+        rect_rot = np.random.randint(0,360, (9,))
     else:
-        rect_rot = np.ones(9) * np.random.randint(0,360)
+        # rect_rot = np.ones(9) * np.random.randint(0,360)
         # rect_rot = np.ones(9) * 35
-        # rect_rot = np.random.randint(0,360, (9,))
+        rect_rot = np.random.randint(0,360, (9,))
 
     x_offset = np.random.randint(0, 200)
     y_offset = np.random.randint(0, 200)
@@ -119,6 +121,7 @@ def sim(model, config):
                     x_offset = np.random.randint(0, 200)
                     y_offset = np.random.randint(0, 200)
                     rect_rot = np.ones(9) * np.random.randint(0,360)
+                    #rect_rot = np.random.randint(0,360, (9,))
 
                     # gx, gy = get_tau_()#np.random.randint(0, 3, (2,))
                     #tau_opts = np.random.randint(0, 255, (3,3,3)) if config.color else goal_pos
@@ -261,10 +264,14 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--framerate', default=300, type=int, help='Framerate of simulation.')
     parser.add_argument('-r', '--rotation', default=True, dest='rotation', action='store_false', help='Used to eval rotation.')
     parser.add_argument('-p', '--print', default=False, dest='print', action='store_true', help='Flag to print activations.')
+    parser.add_argument('-att', '--attention', default=False, dest='attention', action='store_true', help='Flag indicating to use attention')
     args = parser.parse_args()
 
     checkpoint = torch.load(args.weights, map_location='cpu')
-    model = Model(**checkpoint['kwargs'])
+    if args.attention:
+        model = Model(**checkpoint['kwargs'])
+    else:
+        model = Model0(**checkpoint['kwargs'])
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
